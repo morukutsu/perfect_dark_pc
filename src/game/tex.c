@@ -9,6 +9,8 @@
 #include "textures.h"
 #include "types.h"
 
+#include "print.h"
+
 s32 g_TexLutMode;
 u32 var800ab5b4;
 struct var800ab5b8 var800ab5b8[8];
@@ -444,8 +446,12 @@ Gfx *tex0f1742e4(Gfx *arg0, Gfx *arg1, struct tex *tex, bool arg3)
 			gSPTexture(arg0++, 0xffff, 0xffff, lod, G_TX_RENDERTILE, G_ON);
 		}
 	} else {
-		arg1->words.w0 &= ~0x3800;
-		arg1->words.w0 |= lod << 11;
+		// Note PC: we crash here because arg1 is NULL, TODO: check why
+		// Debug on N64 and compare the value?
+		if (arg1) {
+			arg1->words.w0 &= ~0x3800;
+			arg1->words.w0 |= lod << 11;
+		}
 	}
 
 	return arg0;
@@ -783,7 +789,7 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 	struct tex *tex1;
 	struct tex *tex2;
 	Gfx *sp12c;
-	s32 sp128;
+	s32 gdlLeftCount;
 	u32 tmp1;
 	u32 tmp2;
 	u32 tmp3;
@@ -817,7 +823,7 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 	s5 = arg0;
 	s6 = arg2;
 
-	sp128 = gdlsizeinbytes >> 3;
+	gdlLeftCount = gdlsizeinbytes >> 3;
 
 	tex0f173a08();
 
@@ -833,9 +839,25 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 		pool = &g_TexSharedPool;
 	}
 
-	while (sp128 > 0) {
-		switch (s5->texture.cmd) {
+	// Iterate on the display list
+	while (gdlLeftCount > 0) 
+	{
+        u8 opcode = s5->words.w0 >> 24;
+
+		/* Accessing bitfields on PC seems to be a bit broken, not 100% sure why, probably endianess related */
+		/*
+			NOTE PC
+			When entering this case, it seems the command opcode is G_VTX (4)
+			With the pattern 04 F 000 C0
+			In this case, w1 would point to an addr to load vertices from, but it's a texturenum instead?
+			It's weird, should this code check if the command is a texture command before doing this?
+			(see problem above, probably bitfield related!)
+		*/
+		//switch (s5->texture.cmd) 
+		switch (opcode) 
+		{
 		case 0xc0: // Repurposed?
+			
 			spe4 = true;
 
 			if (animated) {
@@ -1088,9 +1110,9 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 			break;
 		}
 
-		sp128--;
+		gdlLeftCount--;
 
-		if (spe4 || sp128 <= 0) {
+		if (spe4 || gdlLeftCount <= 0) {
 			spe4 = false;
 
 			if (spe8 || animated) {
@@ -1111,13 +1133,17 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 	return (uintptr_t) s6 - (uintptr_t) arg2;
 }
 
-void texCopyGdls(Gfx *src, Gfx *dst, s32 arg2)
-{
-	arg2 = (arg2 >> 3);
-	src = src + (arg2 - 1);
-	dst = dst + (arg2 - 1);
+void texCopyGdls(Gfx *src, Gfx *dst, s32 size)
+{	
+	// Convert bytes to 64 bits elements (divide by 8)
+	size = (size >> 3);
 
-	while (arg2--) {
+	// Copy from the end to the begining
+	src = src + (size - 1);
+	dst = dst + (size - 1);
+
+	while (size--) {
+		// Copy 64bits from src to dst
 		dst->force_structure_alignment = src->force_structure_alignment;
 		dst--;
 		src--;

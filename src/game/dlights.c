@@ -29,6 +29,9 @@
 #include "data.h"
 #include "types.h"
 
+#include "byteswap.h"
+#include "print.h"
+
 const char var7f1a78e0[] = "LIGHTS : Hit occured on light %d in room %d\n";
 const char var7f1a7910[] = "L2(%d) -> ";
 const char var7f1a791c[] = "L2 -> BUILD LIGHTS TRANSFER TABLE - Starting\n";
@@ -422,6 +425,16 @@ void roomInitLights(s32 roomnum)
 	light = (struct light *)&g_BgLightsFileData[(u32)g_Rooms[roomnum].lightindex * 0x22];
 
 	for (i = 0; i < room->numlights; i++) {
+		// PC: endianness
+		light->roomnum = swap_uint16(light->roomnum);
+		light->colour = swap_uint16(light->colour);
+
+		for (u32 j = 0; j < 4; j++) {
+			light->bbox[j].s[0] = swap_int16(light->bbox[j].s[0]);
+			light->bbox[j].s[1] = swap_int16(light->bbox[j].s[1]);
+			light->bbox[j].s[2] = swap_int16(light->bbox[j].s[2]);
+		}
+
 #if VERSION < VERSION_NTSC_1_0
 		if (cheatIsActive(CHEAT_PERFECTDARKNESS)) {
 			light->unk04 = 0;
@@ -2305,6 +2318,9 @@ void roomHighlight(s32 roomnum)
 	}
 }
 
+/*
+	Note PC: allocations in this function must be changed to take into account the size of pointers on 64bits
+*/
 void func0f004c6c(void)
 {
 	s32 sp44;
@@ -2318,10 +2334,11 @@ void func0f004c6c(void)
 	u8 *ptr;
 	u8 *backupptr;
 
+	// Note PC: increasing sizes from 4 to 8, done without analyzing exactly how this code works
 	sp44 = align16(0x2000);
-	sp40 = align16(g_NumPortals * 4);
+	sp40 = align16(g_NumPortals * sizeof(void*));
 	sp3c = align16(g_NumPortals * 0xc);
-	sp38 = align16(g_NumPortals * 4);
+	sp38 = align16(g_NumPortals * sizeof(void*));
 	sp34 = align16(g_NumPortals * 2);
 
 	for (i = 0, s4 = sp38; i < g_NumPortals; i++) {

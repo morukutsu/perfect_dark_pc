@@ -32,6 +32,8 @@
 #include "types.h"
 #include "string.h"
 
+#include "print.h"
+
 u8 *var8009cca0;
 u32 var8009cca4;
 struct gfxvtx *var8009cca8[2];
@@ -206,6 +208,13 @@ void titleTickLegal(void)
 	if (g_TitleTimer > TICKS(180)) {
 		titleSetNextMode(TITLEMODE_CHECKCONTROLLERS);
 	}
+
+	// TODO PC remove this
+	//titleSetNextMode(TITLEMODE_CHECKCONTROLLERS);
+	//titleSetNextMode(TITLEMODE_RARELOGO);
+	//titleSetNextMode(TITLEMODE_PDLOGO);
+	//titleSetNextMode(TITLEMODE_SKIP);
+	//g_IsTitleDemo = false;
 }
 
 void titleInitCheckControllers(void)
@@ -558,10 +567,10 @@ void titleInitPdLogo(void)
 
 	{
 		struct coord coord = {0, 0, 0};
-		g_ModelStates[MODEL_NLOGO].modeldef = modeldefLoad(g_ModelStates[MODEL_NLOGO].fileid, nextaddr, 0x47800, 0);
+		g_ModelStates[MODEL_NLOGO].modeldef = modeldefLoad(g_ModelStates[MODEL_NLOGO].fileid, nextaddr, 0x50000, 0);
 		size = ALIGN64(fileGetLoadedSize(g_ModelStates[MODEL_NLOGO].fileid));
 		nextaddr += size;
-		remaining = 0x47800 - size;
+		remaining = 0x50000 - size;
 		modelAllocateRwData(g_ModelStates[MODEL_NLOGO].modeldef);
 
 		g_TitleModel = modelmgrInstantiateModelWithAnim(g_ModelStates[MODEL_NLOGO].modeldef);
@@ -830,8 +839,8 @@ Gfx *titleRenderPdLogoModel(Gfx *gdl, struct model *model, bool arg2, f32 arg3, 
 				rwdata = modelGetNodeRwData(model, node2);
 			}
 
-			s1 = (struct colour *)ALIGN8(s5rodata->numvertices * sizeof(struct gfxvtx) + (s32)s5rodata->vertices);
-			s2 = (struct colour *)ALIGN8(s1rodata->numvertices * (s32) sizeof(struct gfxvtx) + (s32)s1rodata->vertices);
+			s1 = (struct colour *)ALIGN8(s5rodata->numvertices * sizeof(struct gfxvtx) + (uintptr_t)s5rodata->vertices);
+			s2 = (struct colour *)ALIGN8(s1rodata->numvertices * sizeof(struct gfxvtx) + (uintptr_t)s1rodata->vertices);
 
 			a3 = s5rodata->vertices;
 			t0 = s1rodata->vertices;
@@ -874,13 +883,13 @@ Gfx *titleRenderPdLogoModel(Gfx *gdl, struct model *model, bool arg2, f32 arg3, 
 				spfc[j].a = alpha2;
 			}
 
-			sp100 = (void *)ALIGN8(s5rodata->numvertices * sizeof(struct gfxvtx) + (s32)sp100);
-			spfc = (void *)ALIGN8(s5rodata->numcolours * sizeof(u32) + (s32)spfc);
+			sp100 = (void *)ALIGN8(s5rodata->numvertices * sizeof(struct gfxvtx) + (uintptr_t)sp100);
+			spfc = (void *)ALIGN8(s5rodata->numcolours * sizeof(u32) + (uintptr_t)spfc);
 		}
 	}
 
 	gDPSetPrimColor(gdl++, 0, 0, 0x00, 0x00, 0x00, alpha1);
-
+	
 	renderdata.unk00 = arg6;
 	renderdata.unk10 = gfxAllocate(model->definition->nummatrices * sizeof(Mtxf));
 
@@ -7460,7 +7469,8 @@ Gfx *titleRenderPdLogo(Gfx *gdl)
 			rwdata->gdl = tmp = gfxAllocate(5 * sizeof(Gfx));
 
 			gSPSetLights1(tmp++, var80062530);
-			gSPBranchList(tmp++, rodata->opagdl);
+			//gSPBranchList(tmp++, rodata->opagdl);
+			gSPBranchList(tmp++, (Gfx*)((uintptr_t)model->definition + (uintptr_t)rodata->opagdl));
 		}
 
 		node = modelGetPart(model->definition, MODELPART_LOGO_0004);
@@ -7477,7 +7487,8 @@ Gfx *titleRenderPdLogo(Gfx *gdl)
 
 			if (g_PdLogoAmbientLightFrac > 0.0f) {
 				gSPSetLights1(tmp++, var80062560);
-				gSPBranchList(tmp++, rodata->opagdl);
+				//gSPBranchList(tmp++, rodata->opagdl);
+				gSPBranchList(tmp++, (Gfx*)((uintptr_t)model->definition + (uintptr_t)rodata->opagdl));
 			} else {
 				gSPEndDisplayList(tmp++);
 			}
@@ -7497,7 +7508,8 @@ Gfx *titleRenderPdLogo(Gfx *gdl)
 
 			if (g_PdLogoAmbientLightFrac > 0.0f) {
 				gSPSetLights1(tmp++, var80062560);
-				gSPBranchList(tmp++, rodata->opagdl);
+				//gSPBranchList(tmp++, rodata->opagdl);
+				gSPBranchList(tmp++, (Gfx*)((uintptr_t)model->definition + (uintptr_t)rodata->opagdl));
 			} else {
 				gSPEndDisplayList(tmp++);
 			}
@@ -7517,7 +7529,8 @@ Gfx *titleRenderPdLogo(Gfx *gdl)
 
 			if (g_PdLogoAmbientLightFrac > 0.0f) {
 				gSPSetLights1(tmp++, var80062560);
-				gSPBranchList(tmp++, rodata->opagdl);
+				//gSPBranchList(tmp++, rodata->opagdl);
+				gSPBranchList(tmp++, (Gfx*)((uintptr_t)model->definition + (uintptr_t)rodata->opagdl));
 			} else {
 				gSPEndDisplayList(tmp++);
 			}
@@ -7691,6 +7704,7 @@ Gfx *titleRenderPdLogo(Gfx *gdl)
 			}
 		}
 #else
+		
 		if (g_PdLogoTitleStep >= 0) {
 			if (g_PdLogoTitleStep == 0) {
 				// empty
@@ -8109,6 +8123,14 @@ f32 func0f019d0c(f32 arg0)
 	return ((1.0f - arg0) + (1.0f - arg0)) * M_PI - DEG2RAD(90);
 }
 
+void dbgMtx2(Mtxf m, const char* title) {
+    print("mtx %s\n", title);
+    print("%f %f %f %f\n", m.m[0][0], m.m[0][1], m.m[0][2], m.m[0][3]);
+    print("%f %f %f %f\n", m.m[1][0], m.m[1][1], m.m[1][2], m.m[1][3]);
+    print("%f %f %f %f\n", m.m[2][0], m.m[2][1], m.m[2][2], m.m[2][3]);
+    print("%f %f %f %f\n", m.m[3][0], m.m[3][1], m.m[3][2], m.m[3][3]);
+}
+
 Gfx *titleRenderRareLogo(Gfx *gdl)
 {
 	struct modelrenderdata renderdata = { NULL, true, 3 };
@@ -8117,6 +8139,8 @@ Gfx *titleRenderRareLogo(Gfx *gdl)
 	Mtxf sp118;
 	s32 j;
 	s32 s0;
+
+	//print("titleRenderRareLogo()\n");
 
 	static f32 var80062920 = 0;
 
@@ -8437,7 +8461,7 @@ Gfx *titleRenderNoController(Gfx *gdl)
 #endif
 
 	gdl = text0f153780(gdl);
-
+	
 	return gdl;
 }
 

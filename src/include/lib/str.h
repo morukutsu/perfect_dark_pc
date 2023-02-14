@@ -4,6 +4,8 @@
 #include "data.h"
 #include "types.h"
 
+// Note PC: use builtin functions
+/*
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, s32 len);
 char *strcat(char *dst, const char *src);
@@ -13,6 +15,8 @@ char toupper(char c);
 s32 isdigit(char c);
 s32 isalpha(char c);
 s32 isspace(char c);
+*/
+
 s32 strtol(const char *src, const char **endptr, s32 base);
 
 #endif

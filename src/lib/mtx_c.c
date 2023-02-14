@@ -298,6 +298,7 @@ void mtx00015f88(f32 mult, Mtxf *mtx)
 
 u32 mtxGetObfuscatedRomBase(void)
 {
+#if 0
 	u32 value;
 
 	osRecvMesg(&__osPiAccessQueue, NULL, OS_MESG_BLOCK * 0x10000);
@@ -312,6 +313,8 @@ u32 mtxGetObfuscatedRomBase(void)
 	osSendMesg(&__osPiAccessQueue, 0, 0);
 
 	return value;
+#endif
+	return 0;
 }
 
 void mtxF2L(Mtxf *src, Mtxf *dst)
@@ -350,4 +353,28 @@ void mtxF2L(Mtxf *src, Mtxf *dst)
 	dst->l[3][1] = src22 << 16 | (src23 & 0xffff);
 	dst->l[3][2] = src30 << 16 | (src31 & 0xffff);
 	dst->l[3][3] = src32 << 16 | (src33 & 0xffff);
+}
+
+//void mtxL2F(float mf[4][4], Mtx *m)
+void mtxL2F(Mtxf *src, Mtxf *dst)
+{
+	int i, j;
+	unsigned int e1,e2;
+	unsigned int *ai,*af;
+	int q1,q2;
+
+	ai = (unsigned int *) &src->l[0][0];
+	af = (unsigned int *) &src->l[2][0];
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 2; j++) {
+			e1 = (*ai & 0xffff0000) | ((*af >> 16) & 0xffff);
+			e2 = ((*(ai++) << 16) & 0xffff0000) | (*(af++) & 0xffff);
+			q1 = *((int *) &e1);
+			q2 = *((int *) &e2);
+
+			dst->m[i][j*2] = FIX32TOF(q1);
+			dst->m[i][j*2+1] = FIX32TOF(q2);
+		}
+	}
 }

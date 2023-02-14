@@ -15,6 +15,7 @@
 struct stagesetup g_StageSetup;
 u8 *g_GeCreditsData;
 
+// TODO: update offets in this function
 u32 setupGetCmdLength(u32 *cmd)
 {
 #if VERSION < VERSION_NTSC_1_0
@@ -23,7 +24,87 @@ u32 setupGetCmdLength(u32 *cmd)
 	mainOverrideVariable("crash1", &crash1);
 #endif
 
-	switch ((u8)cmd[0]) {
+	struct defaultobj* obj = (struct defaultobj*)cmd;
+
+	switch (obj->type) {
+	case OBJTYPE_CHR:                return sizeof(struct packedchr) / 4;
+	case OBJTYPE_DOOR:               return sizeof(struct doorobj) / 4;
+	case OBJTYPE_DOORSCALE:          return 2;
+	case OBJTYPE_BASIC:              return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_DEBRIS:             return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_GLASS:              return sizeof(struct glassobj) / 4;
+	case OBJTYPE_TINTEDGLASS:        return 26;
+	case OBJTYPE_SAFE:               return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_GASBOTTLE:          return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_KEY:                return 24;
+	case OBJTYPE_ALARM:              return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_CCTV:               return sizeof(struct cctvobj) / 4;
+	case OBJTYPE_AMMOCRATE:          return 24;
+	case OBJTYPE_WEAPON:             return sizeof(struct weaponobj) / 4;
+	case OBJTYPE_SINGLEMONITOR:      return sizeof(struct singlemonitorobj) / 4;
+	case OBJTYPE_MULTIMONITOR:       return sizeof(struct multimonitorobj) / 4;
+	case OBJTYPE_HANGINGMONITORS:    return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_AUTOGUN:            return sizeof(struct autogunobj) / 4;
+	case OBJTYPE_LINKGUNS:           return 2;
+	case OBJTYPE_HAT:                return sizeof(struct defaultobj) / 4;
+	case OBJTYPE_GRENADEPROB:        return 2;
+	case OBJTYPE_LINKLIFTDOOR:       return sizeof(struct linkliftdoorobj) / 4;
+	case OBJTYPE_SAFEITEM:           return 5;
+	case OBJTYPE_MULTIAMMOCRATE:     return 42;
+	case OBJTYPE_SHIELD:             return 26;
+	case OBJTYPE_TAG:                return sizeof(struct tag) / 4;
+	case OBJTYPE_RENAMEOBJ:          return 10;
+	case OBJTYPE_BEGINOBJECTIVE:     return 4;
+	case OBJTYPE_ENDOBJECTIVE:       return 1;
+	case OBJECTIVETYPE_DESTROYOBJ:   return 2;
+	case OBJECTIVETYPE_COMPFLAGS:    return 2;
+	case OBJECTIVETYPE_FAILFLAGS:    return 2;
+	case OBJECTIVETYPE_COLLECTOBJ:   return 2;
+	case OBJECTIVETYPE_THROWOBJ:     return 2;
+	case OBJECTIVETYPE_HOLOGRAPH:    return sizeof(struct criteria_holograph) / 4;
+	case OBJECTIVETYPE_1F:           return 1;
+	case OBJECTIVETYPE_ENTERROOM:    return 4;
+	case OBJECTIVETYPE_THROWINROOM:    return 5;
+	case OBJTYPE_22:                 return 1;
+	case OBJTYPE_BRIEFING:           return 4;
+	case OBJTYPE_PADLOCKEDDOOR:      return 4;
+	case OBJTYPE_TRUCK:              return 34;
+	case OBJTYPE_HELI:               return 35;
+	case OBJTYPE_TANK:               return 32;
+	case OBJTYPE_CAMERAPOS:          return 7;
+	case OBJTYPE_LIFT:               return sizeof(struct liftobj) / 4;
+	case OBJTYPE_CONDITIONALSCENERY: return 5;
+	case OBJTYPE_BLOCKEDPATH:        return 4;
+	case OBJTYPE_HOVERBIKE:          return sizeof(struct hoverbikeobj) / 4;
+	case OBJTYPE_HOVERPROP:          return sizeof(struct hoverpropobj) / 4;
+	case OBJTYPE_FAN:                return 29;
+	case OBJTYPE_HOVERCAR:           return 38;
+	case OBJTYPE_CHOPPER:            return 58;
+	case OBJTYPE_PADEFFECT:          return 3;
+	case OBJTYPE_MINE:               return 26;
+	case OBJTYPE_ESCASTEP:           return 27;
+	}
+
+#if VERSION < VERSION_NTSC_1_0
+	if (crash1) {
+		CRASH();
+	}
+#endif
+
+	return 1;
+}
+
+u32 setupGetCmdLengthLoad(u32 *cmd)
+{
+#if VERSION < VERSION_NTSC_1_0
+	static u32 crash1 = 0;
+
+	mainOverrideVariable("crash1", &crash1);
+#endif
+
+	struct defaultobj_load* obj = (struct defaultobj_load*)cmd;
+
+	switch (obj->type) {
 	case OBJTYPE_CHR:                return 11;
 	case OBJTYPE_DOOR:               return 55;
 	case OBJTYPE_DOORSCALE:          return 2;
@@ -93,17 +174,18 @@ u32 setupGetCmdLength(u32 *cmd)
 
 u32 *setupGetCmdByIndex(s32 wantindex)
 {
-	u32 *cmd = g_StageSetup.props;
+	struct defaultobj *cmd = g_StageSetup.props;
 
 	if (wantindex >= 0 && cmd) {
 		s32 cmdindex = 0;
 
-		while ((u8)cmd[0] != OBJTYPE_END) {
+		while (cmd->type != OBJTYPE_END) {
+
 			if (cmdindex == wantindex) {
 				return cmd;
 			}
 
-			cmd = cmd + setupGetCmdLength(cmd);
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}
@@ -113,17 +195,17 @@ u32 *setupGetCmdByIndex(s32 wantindex)
 
 s32 setupGetCmdIndexByTag(struct tag *tag)
 {
-	u32 *cmd = g_StageSetup.props;
+	struct defaultobj* cmd = g_StageSetup.props;
 
 	if (cmd) {
 		s32 cmdindex = 0;
 
-		while ((u8)cmd[0] != OBJTYPE_END) {
+		while (cmd->type != OBJTYPE_END) {
 			if ((struct tag *)cmd == tag) {
 				return cmdindex;
 			}
 
-			cmd = cmd + setupGetCmdLength(cmd);
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}
@@ -133,17 +215,17 @@ s32 setupGetCmdIndexByTag(struct tag *tag)
 
 u32 setupGetCmdIndexByProp(struct prop *prop)
 {
-	u32 *cmd = g_StageSetup.props;
+	struct defaultobj* cmd = g_StageSetup.props;
 
 	if (cmd) {
 		s32 cmdindex = 0;
 
-		while ((u8)cmd[0] != OBJTYPE_END) {
-			if ((struct prop *)cmd[5] == prop) {
+		while (cmd->type != OBJTYPE_END) {
+			if ((struct prop *)cmd->prop == prop) {
 				return cmdindex;
 			}
 
-			cmd = cmd + setupGetCmdLength(cmd);
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}
@@ -216,6 +298,7 @@ struct defaultobj *setupGetObjByCmdIndex(u32 cmdindex)
 	u32 *cmd = setupGetCmdByIndex(cmdindex);
 
 	if (cmd) {
+		// TODO: FIX THAT
 		switch ((u8)cmd[0]) {
 		case OBJTYPE_DOOR:
 		case OBJTYPE_BASIC:
@@ -306,11 +389,11 @@ struct defaultobj *setupFindObjForReuse(s32 wanttype, struct defaultobj **offscr
 	struct defaultobj *offscreenobj = NULL;
 	struct defaultobj *anyobj = NULL;
 
-	u32 *cmd = g_StageSetup.props;
+	struct defaultobj *cmd = g_StageSetup.props;
 
 	if (cmd) {
-		while ((u8)cmd[0] != OBJTYPE_END) {
-			if ((wanttype & 0xff) == (u8)cmd[0]) {
+		while (cmd->type != OBJTYPE_END) {
+			if ((wanttype & 0xff) == (u8)cmd->type) {
 				struct defaultobj *obj = (struct defaultobj *)cmd;
 
 				if (obj->prop == NULL) {
@@ -335,7 +418,7 @@ struct defaultobj *setupFindObjForReuse(s32 wanttype, struct defaultobj **offscr
 				}
 			}
 
-			cmd = cmd + setupGetCmdLength(cmd);
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
 		}
 	}
 

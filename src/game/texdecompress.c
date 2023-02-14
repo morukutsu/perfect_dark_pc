@@ -11,6 +11,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+
 struct texture *g_Textures;
 u32 var800aabc4;
 struct texpool g_TexSharedPool;
@@ -185,6 +187,7 @@ s32 texInflateZlib(u8 *src, u8 *dst, s32 arg2, s32 forcenumimages, struct texpoo
 	}
 
 	format = texReadBits(8);
+	
 	numcolours = texReadBits(8) + 1;
 
 	for (i = 0; i < numcolours; i++) {
@@ -193,9 +196,12 @@ s32 texInflateZlib(u8 *src, u8 *dst, s32 arg2, s32 forcenumimages, struct texpoo
 
 	foundthething = false;
 
+	//print("numimages: %d\n", numimages);
+
 	for (j = 0; j < numimages; j++) {
 		width = texReadBits(8);
 		height = texReadBits(8);
+		//print("width: %d height: %d\n", width, height);
 
 		if (j == 0) {
 			pool->rightpos->width = width;
@@ -224,7 +230,27 @@ s32 texInflateZlib(u8 *src, u8 *dst, s32 arg2, s32 forcenumimages, struct texpoo
 		}
 
 		imagebytesout = texAlignIndices(scratch2, width, height, format, &dst[totalbytesout]);
-		texSetBitstring(rzipGetSomething());
+
+		// Note PC: after the image has been decompressed, we must place the pointer to the next image
+		// However, we have this info only if we use the assembly version of the rzip function
+		// rzipGetSomething() returns probably the address of the end of the zip stream
+		u32 offset = getInflate1173Offset();
+
+		/*
+		if (numimages > 1) {
+			print("offset: %d\n", offset);
+
+			for (int i = 0; i < 32; i++) {
+				print("%02x ", var800ab540[offset + i]);
+			}
+			print("\n");
+
+		}
+		*/
+
+		//texSetBitstring(rzipGetSomething());
+		// PC
+		texSetBitstring(var800ab540 + offset + 5);
 
 		if (arg2 == 1) {
 			if (IS4MB() && j == 2 && !foundthething) {
@@ -342,7 +368,8 @@ s32 texAlignIndices(u8 *src, s32 width, s32 height, s32 format, u8 *dst)
 			src++;
 		}
 
-		outptr = (u8 *)(((uintptr_t)outptr + 7) & ~7);
+		//outptr = (u8 *)(((uintptr_t)outptr + 7) & ~7);
+		outptr = (u8 *)(((u64)outptr + 7) & ~7);
 	}
 
 	return outptr - dst;
@@ -1457,9 +1484,13 @@ void texReadAlphaBits(u8 *dst, s32 count)
  */
 s32 texReadUncompressed(u8 *dst, s32 width, s32 height, s32 format)
 {
-	u32 *dst32 = (u32 *)(((uintptr_t)dst + 0xf) & ~0xf);
+	/*u32 *dst32 = (u32 *)(((uintptr_t)dst + 0xf) & ~0xf);
 	u16 *dst16 = (u16 *)(((uintptr_t)dst + 7) & ~7);
-	u8 *dst8 = (u8 *)(((uintptr_t)dst + 7) & ~7);
+	u8 *dst8 = (u8 *)(((uintptr_t)dst + 7) & ~7);*/
+	u32 *dst32 = (u32 *)(((u64)dst + 0xf) & ~0xf);
+	u16 *dst16 = (u16 *)(((u64)dst + 7) & ~7);
+	u8 *dst8 = (u8 *)(((u64)dst + 7) & ~7);
+
 	s32 x;
 	s32 y;
 
@@ -1909,6 +1940,9 @@ s32 texInflateLookupFromBuffer(u8 *src, s32 width, s32 height, u8 *dst, u8 *look
  */
 void texSwapAltRowBytes(u8 *dst, s32 width, s32 height, s32 format)
 {
+	// NOTE: on PC, dont swap rows
+	return 0;
+
 	s32 x;
 	s32 y;
 	s32 alignedwidth;
@@ -2015,7 +2049,7 @@ void texInitPool(struct texpool *pool, u8 *start, s32 len)
 	pool->start = start;
 	pool->end = (struct tex *)(start + len);
 	pool->leftpos = start;
-	pool->rightpos = (struct tex *)((s32)start + len);
+	pool->rightpos = (struct tex *)((u64)start + len);
 }
 
 struct tex *texFindInPool(s32 texturenum, struct texpool *pool)
@@ -2040,7 +2074,9 @@ struct tex *texFindInPool(s32 texturenum, struct texpool *pool)
 				return NULL;
 			}
 
-			cur = (struct tex *) PHYS_TO_K0(cur->next);
+			//cur = (struct tex *) PHYS_TO_K0(cur->next);
+			cur = (struct tex *) (cur->next);
+
 		}
 
 		return NULL;
@@ -2062,7 +2098,7 @@ struct tex *texFindInPool(s32 texturenum, struct texpool *pool)
 
 s32 texGetPoolFreeBytes(struct texpool *pool)
 {
-	return (s32) pool->rightpos - (s32) pool->leftpos;
+	return (s32) ((u64)pool->rightpos - (u64)pool->leftpos);
 }
 
 u8 *texGetPoolLeftPos(struct texpool *pool)
@@ -2077,14 +2113,18 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *pool, s32 arg2)
 	while (bytes[0] != (u8)G_ENDDL) {
 		// Look for GBI sequence: fd...... abcd....
 		if (bytes[0] == G_SETTIMG && bytes[4] == 0xab && bytes[5] == 0xcd) {
-			texLoad((s32 *)((s32)bytes + 4), pool, arg2);
+			//texLoad((s32 *)((s32)bytes + 4), pool, arg2);
+			texLoad((s32 *)((intptr_t)bytes + 4), pool, arg2, NULL);
 		}
 
+		// Note PC: if we increase the size of each display list element, this function will not work anymore
+		// Tag: Display List Element Size
 		bytes += 8;
 	}
 }
 
-extern u8 _texturesdataSegmentRomStart;
+//extern u8 _texturesdataSegmentRomStart;
+u32 _texturesdataSegmentRomStart = 0x1d65f40;
 
 /**
  * Load and decompress a texture from ROM.
@@ -2121,7 +2161,9 @@ extern u8 _texturesdataSegmentRomStart;
  * z = texture is compressed with zlib
  * l = number of levels of detail within the texture
  */
-void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
+
+// NOTE: On PC, added an argument to get access to the real texture pointer
+void texLoad(s32 *updateword, struct texpool *pool, bool arg2, void* textureptr)
 {
 	u8 compbuffer[4 * 1024 + 0x40];
 	u8 *compptr;
@@ -2140,6 +2182,8 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 	s16 *texnumptr;
 	s32 bytesout;
 
+	debugPrint(PC_DBG_FLAG_TEX, "texLoad() updateword: %x pool: %x arg2: %d\n", *updateword, pool, arg2);
+
 	usingsharedpool = 0;
 
 	if (pool == NULL) {
@@ -2149,7 +2193,7 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 	if (pool == &g_TexSharedPool) {
 		usingsharedpool = 1;
 	}
-
+	
 	// If the value at updateword isn't already a pointer
 	if ((*updateword & 0xffff0000) == 0 || (*updateword & 0xffff0000) == 0xabcd0000) {
 		g_TexNumToLoad = *updateword & 0xffff;
@@ -2161,7 +2205,8 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 				return;
 			}
 
-			alignedcompbuffer = (u8 *) (((uintptr_t)compbuffer + 0xf) >> 4 << 4);
+			//alignedcompbuffer = (u8 *) (((uintptr_t)compbuffer + 0xf) >> 4 << 4);
+			alignedcompbuffer = (u8 *) (((u64)compbuffer + 0xf) >> 4 << 4);
 
 			if (alignedcompbuffer);
 			if (tex);
@@ -2177,9 +2222,14 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 				return;
 			}
 
+			debugPrint(PC_DBG_FLAG_TEX, "- tex num to load: %x \n", g_TexNumToLoad);
+			debugPrint(PC_DBG_FLAG_TEX, "- texture offset: %x - %x\n", thisoffset, nextoffset);
+			debugPrint(PC_DBG_FLAG_TEX, "- length: %x bytes\n", nextoffset - thisoffset);
+			debugPrint(PC_DBG_FLAG_TEX, "- dmaExec len: %x bytes\n", ((u32) (nextoffset - thisoffset) + 0x1f) >> 4 << 4);
+
 			// Copy the compressed texture to RAM
 			dmaExec(alignedcompbuffer,
-					(romptr_t) &_texturesdataSegmentRomStart + (thisoffset & 0xfffffff8),
+					(romptr_t)_texturesdataSegmentRomStart + (thisoffset & 0xfffffff8),
 					((u32) (nextoffset - thisoffset) + 0x1f) >> 4 << 4);
 
 			compptr = (u8 *) alignedcompbuffer + (thisoffset & 7);
@@ -2204,6 +2254,9 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 				freebytes = texGetPoolFreeBytes(pool);
 			}
 
+			// Notes PC: probably a problem here, the freebytes are quite large, check the implementation
+			debugPrint(PC_DBG_FLAG_TEX, "- freebytes: %xb\n", freebytes);
+
 			if ((!iszlib && freebytes < 4300) || (iszlib && freebytes < 2600)) {
 				*updateword = osVirtualToPhysical(pool->start);
 				return;
@@ -2213,9 +2266,16 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 			// - rightpos is the head of a linked list, so grab it and find the tail
 			// - set rightpos to a spot in the buffer that can fit a tex before it
 			// - set leftpos to 0x10 after rightpos
+
+			// Note PC
+			// When compiling in 64 bits, some structures might be bigger because of the increased size of pointers
+			// This is probably going to cause problems at some point because the game might assume strict memory sizes
+			// TODO PC: check this code by allocating two textures to check if the pool iteration works
+			// PHYS_TO_K0(tail->next) destroys 64 pointers, must fix
 			if (usingsharedpool) {
 				tail = pool->rightpos;
-				pool->rightpos = (struct tex *) ((((uintptr_t) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
+				//pool->rightpos = (struct tex *) ((((uintptr_t) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
+				pool->rightpos = (struct tex *) ((((u64) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
 				pool->leftpos = ((u8 *) pool->rightpos + sizeof(struct tex));
 
 				while (tail) {
@@ -2223,12 +2283,14 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 						break;
 					}
 
-					tail = (struct tex *) PHYS_TO_K0(tail->next);
+					//tail = (struct tex *) PHYS_TO_K0(tail->next);
+					tail = (struct tex *)tail->next;
 				}
 			}
 
 			// Write the texturenum into the allocation
 			texnumptr = (s16 *) pool->leftpos;
+
 			*texnumptr = g_TexNumToLoad;
 			pool->leftpos += 8;
 
@@ -2241,10 +2303,14 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 
 			// Extract the texture data to the allocation (pool->leftpos)
 			if (iszlib) {
+				debugPrint(PC_DBG_FLAG_TEX, "- ZLIB\n");
 				bytesout = texInflateZlib(compptr, pool->leftpos, sp14a8, lod, pool, arg2);
 			} else {
+				debugPrint(PC_DBG_FLAG_TEX, "- NOT ZLIB\n");
 				bytesout = texInflateNonZlib(compptr, pool->leftpos, sp14a8, lod, pool, arg2);
 			}
+
+			debugPrint(PC_DBG_FLAG_TEX, "bytesout %x bytes\n", bytesout);
 
 			// If we're using the shared pool, the data must be copied out of
 			// the stack and into the heap.
@@ -2263,7 +2329,9 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 				pool->rightpos->next = 0;
 
 				if (tail != NULL) {
-					tail->next = (uintptr_t) pool->rightpos & 0xffffff;
+					// TODO PC: FIX
+					//tail->next = (uintptr_t) pool->rightpos & 0xffffff;
+					tail->next = (u64) pool->rightpos;
 				} else {
 					pool->head = pool->rightpos;
 				}
@@ -2278,20 +2346,46 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2)
 			}
 		}
 
-		*updateword = osVirtualToPhysical(tex->data);
+		// Note PC
+		// We might have to store the mapping 32bit addr to 64bit addr for each texture we loaded
+		*updateword = (u32)tex->data;
+		if (textureptr) {
+			*(u64*)textureptr = (u64)(uintptr_t)tex->data;
+		}
 	}
 }
 
-void texLoadFromConfigs(struct textureconfig *configs, s32 numconfigs, struct texpool *pool, s32 arg3)
+void texLoadFromConfigs(struct textureconfig *configs, s32 numconfigs, struct texpool *pool, s64 arg3)
 {
+	// Note PC
+	/*
+		On PC since pointers are 32bits, texLoad(&configs[i].texturenum, pool, true);
+		Will strip the pointer of some bits...
+		We need texload to fill the textureptr info in the textureconfig structure
+	*/
 	s32 i;
 
 	for (i = 0; i < numconfigs; i++) {
 		if ((s32)configs[i].texturenum < NUM_TEXTURES) {
-			texLoad(&configs[i].texturenum, pool, true);
+			u64 textureptr;
+			texLoad(&configs[i].texturenum, pool, true, (void*)&textureptr);
+			configs[i].textureptr = (u8*)textureptr;
 			configs[i].unk0b = 1;
 		} else {
-			configs[i].texturenum += arg3;
+			// Note PC
+			// It seems that when the pointer is > NUM_TEXTURES it means the texture is already loaded
+			// If arg3 is non zero, then the "texturenum" (or the memory address...) is increased to match
+			// what is loaded in memory? Maybe the modeldef files packages texture within them
+
+			debugPrint(PC_DBG_FLAG_TEX, "texLoadFromConfigs(): already in RAM\n");
+			debugPrint(PC_DBG_FLAG_TEX, "- num: %x\n", (s32)configs[i].texturenum);
+			debugPrint(PC_DBG_FLAG_TEX, "- numconfigs: %x\n", numconfigs);
+			debugPrint(PC_DBG_FLAG_TEX, "- arg3: %llx\n", arg3);
+
+			uintptr_t texAddr = (configs[i].texturenum + arg3);
+			debugPrint(PC_DBG_FLAG_TEX, "- texAddr: %llx\n", texAddr);
+
+			configs[i].textureptr = (u8*)texAddr;
 		}
 	}
 }
@@ -2300,7 +2394,7 @@ void texLoadFromTextureNum(u32 texturenum, struct texpool *pool)
 {
 	s32 texturenumcopy = texturenum;
 
-	texLoad(&texturenumcopy, pool, true);
+	texLoad(&texturenumcopy, pool, true, NULL);
 }
 
 s32 func0f173510(s32 arg0, s32 arg1, s32 arg3)

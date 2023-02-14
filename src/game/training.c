@@ -41,8 +41,12 @@
 #define FRSCRIPTINDEX_TARGETS 0x22
 #define FRSCRIPTINDEX_HELP    0x71
 
-extern u8 *_firingrangeSegmentRomStart;
-extern u8 *_firingrangeSegmentRomEnd;
+/*
+	extern u8 *_firingrangeSegmentRomStart;
+	extern u8 *_firingrangeSegmentRomEnd;
+*/
+u32 _firingrangeSegmentRomStart = 0x007e9d20;
+u32 _firingrangeSegmentRomEnd = 0x007eb270;
 
 struct frdata g_FrData;
 struct trainingdata g_DtData;
@@ -479,7 +483,8 @@ void *frLoadRomData(u32 len)
 	g_FrRomData = mempAlloc(ALIGN16(len), MEMPOOL_STAGE);
 
 	if (g_FrRomData) {
-		return dmaExecWithAutoAlign(g_FrRomData, (romptr_t) &_firingrangeSegmentRomStart, len);
+		//return dmaExecWithAutoAlign(g_FrRomData, (romptr_t) &_firingrangeSegmentRomStart, len);
+		return dmaExecWithAutoAlign(g_FrRomData, (romptr_t)_firingrangeSegmentRomStart, len);
 	}
 
 	return NULL;
@@ -1071,7 +1076,8 @@ void frUnlockDoor(void)
 void frLoadData(void)
 {
 	if (!g_FrDataLoaded) {
-		s32 len = (s32)&_firingrangeSegmentRomEnd - (s32)&_firingrangeSegmentRomStart;
+		//s32 len = (s32)&_firingrangeSegmentRomEnd - (s32)&_firingrangeSegmentRomStart;
+		s32 len = (s32)_firingrangeSegmentRomEnd - (s32)_firingrangeSegmentRomStart;
 		s32 index = 0;
 		u32 i;
 		u32 numscripts = 1;

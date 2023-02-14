@@ -8,11 +8,11 @@
 
 void objsStop(void)
 {
-	u32 *ptr = g_StageSetup.props;
+	struct defaultobj *ptr = (struct defaultobj*)g_StageSetup.props;
 
 	if (ptr) {
-		while ((u8)ptr[0] != OBJTYPE_END) {
-			switch ((u8)ptr[0]) {
+		while (ptr->type != OBJTYPE_END) {
+			switch ((u8)ptr->type) {
 			case OBJTYPE_DOOR:
 			case OBJTYPE_BASIC:
 			case OBJTYPE_KEY:
@@ -77,7 +77,7 @@ void objsStop(void)
 				break;
 			}
 
-			ptr = ptr + setupGetCmdLength(ptr);
+			ptr = (struct defaultobj*)((uintptr_t)ptr + (uintptr_t)(setupGetCmdLength(ptr) * sizeof(u32)));
 		}
 	}
 }

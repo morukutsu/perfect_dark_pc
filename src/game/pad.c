@@ -5,6 +5,9 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+#include "byteswap.h"
+
 struct padsfileheader *g_PadsFile;
 u16 *g_PadOffsets;
 u32 var800a2358;
@@ -31,9 +34,8 @@ void padUnpack(s32 padnum, u32 fields, struct pad *pad)
 	// Header format:
 	// flags, room and liftnum
 	// ffffffff ffffffff ffrrrrrr rrrrllll
-
 	if (fields & PADFIELD_ROOM) {
-		pad->room = (s32)(*header << 18) >> 22;
+		pad->room = ((s32)(*header << 18) >> 22);
 	}
 
 	if (fields & PADFIELD_LIFT) {
@@ -45,17 +47,17 @@ void padUnpack(s32 padnum, u32 fields, struct pad *pad)
 	if ((*header >> 14) & PADFLAG_INTPOS) {
 		if (fields & PADFIELD_POS) {
 			s16 *sbuffer = (s16 *) ptr;
-			pad->pos.x = sbuffer[0];
-			pad->pos.y = sbuffer[1];
-			pad->pos.z = sbuffer[2];
+			pad->pos.x = swap_int16(sbuffer[0]);
+			pad->pos.y = swap_int16(sbuffer[1]);
+			pad->pos.z = swap_int16(sbuffer[2]);
 		}
 		ptr += 8;
 	} else {
 		if (fields & PADFIELD_POS) {
 			fbuffer = (f32 *) ptr;
-			pad->pos.x = fbuffer[0];
-			pad->pos.y = fbuffer[1];
-			pad->pos.z = fbuffer[2];
+			pad->pos.x = swap_f32(fbuffer[0]);
+			pad->pos.y = swap_f32(fbuffer[1]);
+			pad->pos.z = swap_f32(fbuffer[2]);
 		}
 		ptr += 12;
 	}
@@ -79,9 +81,9 @@ void padUnpack(s32 padnum, u32 fields, struct pad *pad)
 	} else {
 		if (fields & (PADFIELD_UP | PADFIELD_NORMAL)) {
 			fbuffer = (f32 *) ptr;
-			pad->up.x = fbuffer[0];
-			pad->up.y = fbuffer[1];
-			pad->up.z = fbuffer[2];
+			pad->up.x = swap_f32(fbuffer[0]);
+			pad->up.y = swap_f32(fbuffer[1]);
+			pad->up.z = swap_f32(fbuffer[2]);
 		}
 		ptr += 12;
 	}
@@ -105,9 +107,9 @@ void padUnpack(s32 padnum, u32 fields, struct pad *pad)
 	} else {
 		if (fields & (PADFIELD_LOOK | PADFIELD_NORMAL)) {
 			fbuffer = (f32 *) ptr;
-			pad->look.x = fbuffer[0];
-			pad->look.y = fbuffer[1];
-			pad->look.z = fbuffer[2];
+			pad->look.x = swap_f32(fbuffer[0]);
+			pad->look.y = swap_f32(fbuffer[1]);
+			pad->look.z = swap_f32(fbuffer[2]);
 		}
 		ptr += 12;
 	}
@@ -121,12 +123,12 @@ void padUnpack(s32 padnum, u32 fields, struct pad *pad)
 	if ((*header >> 14) & PADFLAG_HASBBOXDATA) {
 		if (fields & PADFIELD_BBOX) {
 			fbuffer = (f32 *) ptr;
-			pad->bbox.xmin = fbuffer[0];
-			pad->bbox.xmax = fbuffer[1];
-			pad->bbox.ymin = fbuffer[2];
-			pad->bbox.ymax = fbuffer[3];
-			pad->bbox.zmin = fbuffer[4];
-			pad->bbox.zmax = fbuffer[5];
+			pad->bbox.xmin = swap_f32(fbuffer[0]);
+			pad->bbox.xmax = swap_f32(fbuffer[1]);
+			pad->bbox.ymin = swap_f32(fbuffer[2]);
+			pad->bbox.ymax = swap_f32(fbuffer[3]);
+			pad->bbox.zmin = swap_f32(fbuffer[4]);
+			pad->bbox.zmax = swap_f32(fbuffer[5]);
 		}
 		ptr += 4 * 6;
 	} else {

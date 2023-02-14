@@ -1,6 +1,8 @@
 #ifndef _IN_GBIEX_H
 #define _IN_GBIEX_H
 
+#include "gfx/gbi_addon.h"
+
 #define G_SETCOLOR 0x07
 #define G_TRI4     -79
 
@@ -22,6 +24,7 @@
 			| _SHIFTL((count), 16, 8)                \
 			| _SHIFTL((size), 0, 16));               \
 	_g->words.w1 = (unsigned int)(ptr);              \
+	gAddr_addon(_g, ptr, __FILE__, __LINE__);        \
 }
 
 #define	gDPSetVerticeArray(pkt, ptr, numvertices) \
@@ -46,6 +49,7 @@
 			| _SHIFTL(((numcolors) - 1) << 2, 16, 8) \
 			| _SHIFTL((numcolors) * 4, 0, 16));      \
 	_g->words.w1 = (unsigned int)(ptr);              \
+	gAddr_addon(_g, ptr, __FILE__, __LINE__);        \
 }
 
 /**

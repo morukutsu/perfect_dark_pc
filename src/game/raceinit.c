@@ -7,6 +7,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "rom.h"
+
 void racesInit(void)
 {
 	modelSetVtxAllocatorFunc(&chrAllocateVertices);

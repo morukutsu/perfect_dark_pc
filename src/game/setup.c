@@ -37,6 +37,12 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+#include "byteswap.h"
+#include "gfx/hashmap.h"
+#include "offsetsmap.h"
+#include "native_functions.h"
+
 s32 g_SetupCurMpLocation;
 u32 var8009cc34;
 u32 var8009cc38;
@@ -1288,6 +1294,219 @@ void setupLoadBriefing(s32 stagenum, u8 *buffer, s32 bufferlen, struct briefing 
 	}
 }
 
+struct cmd32 {
+	s32 type;
+	s32 param1;
+	s32 param2;
+	s32 param3;
+};
+
+
+u32 setupCalculateIntroSize(s32* start)
+{
+	s32 *cmd = start;
+
+	if (cmd) {
+		while (swap_uint32(cmd[0]) != INTROCMD_END) {
+			switch (swap_uint32(cmd[0])) {
+			case INTROCMD_SPAWN:
+				cmd += 3;
+				break;
+			case INTROCMD_CASE:
+			case INTROCMD_CASERESPAWN:
+				cmd += 3;
+				break;
+			case INTROCMD_HILL:
+				cmd += 2;
+				break;
+			case INTROCMD_WEAPON:
+				cmd += 4;
+				break;
+			case INTROCMD_AMMO:
+				cmd += 4;
+				break;
+			case INTROCMD_3:
+				cmd += 8;
+				break;
+			case INTROCMD_4:
+				cmd += 2;
+				break;
+			case INTROCMD_OUTFIT:
+				cmd += 2;
+				break;
+			case INTROCMD_6:
+				cmd += 10;
+				break;
+			case INTROCMD_WATCHTIME:
+				cmd += 3;
+				break;
+			case INTROCMD_CREDITOFFSET:
+				cmd += 2;
+				break;
+			default:
+				cmd++;
+				break;
+			}
+		}
+	}
+
+	return cmd - start;
+}
+
+void setupConvertIntroCmd(s32* start)
+{
+	s32 *cmd = start;
+
+	if (cmd) {
+		while (cmd[0] != INTROCMD_END) {
+			switch (cmd[0]) {
+			case INTROCMD_SPAWN:
+				cmd += 3;
+				break;
+			case INTROCMD_CASE:
+			case INTROCMD_CASERESPAWN:
+				cmd += 3;
+				break;
+			case INTROCMD_HILL:
+				cmd += 2;
+				break;
+			case INTROCMD_WEAPON: {
+				cmd += 4;
+				break;
+			}
+			case INTROCMD_AMMO:
+				cmd += 4;
+				break;
+			case INTROCMD_3:
+				cmd += 8;
+				break;
+			case INTROCMD_4:
+				cmd += 2;
+				break;
+			case INTROCMD_OUTFIT:
+				cmd += 2;
+				break;
+			case INTROCMD_6:
+				cmd += 10;
+				break;
+			case INTROCMD_WATCHTIME:
+				cmd += 3;
+				break;
+			case INTROCMD_CREDITOFFSET:
+				cmd += 2;
+				break;
+			default:
+				cmd++;
+				break;
+			}
+		}
+	}
+}
+
+void convertDefaultobj(struct defaultobj* dst, struct defaultobj_load* src)
+{
+	dst->extrascale = swap_uint16(src->extrascale);
+	dst->hidden2 = src->hidden2;
+	dst->type = src->type;
+	dst->modelnum = swap_int16(src->modelnum);
+	dst->pad = swap_int16(src->pad);
+	dst->flags = swap_uint32(src->flags);
+	dst->flags2 = swap_uint32(src->flags2);
+	dst->flags3 = swap_uint32(src->flags3);
+	dst->prop = (struct prop*)swap_uint32(src->prop);
+	dst->model = (struct model*)swap_uint32(src->model);
+	for (u32 i = 0; i < 3; i++)
+		for (u32 j = 0; j < 3; j++)
+			dst->realrot[i][j] = swap_f32(src->realrot[i][j]);
+	dst->hidden = swap_uint32(src->hidden);
+	dst->geotilef = (struct geotilef*)swap_uint32(src->geotilef);
+	dst->projectile = (struct projectile*)swap_uint32(src->projectile);
+	dst->damage = swap_int16(src->damage);
+	dst->maxdamage = swap_int16(src->maxdamage);
+	for (u32 i = 0; i < 4; i++)
+		dst->shadecol[i] = src->shadecol[i];
+	for (u32 i = 0; i < 4; i++)
+		dst->nextcol[i] = src->nextcol[i];
+	dst->floorcol = swap_uint16(src->floorcol);
+	dst->geocount = src->geocount; 
+}
+
+void convertTvscreenobj(struct tvscreen* dst, struct tvscreen_load* src)
+{
+	dst->cmdlist = swap_uint32(src->cmdlist);
+	dst->offset = swap_uint16(src->offset);
+	dst->pause60 = swap_int16(src->pause60);
+	dst->tconfig = swap_uint32(src->tconfig);
+	dst->rot = swap_f32(src->rot);
+	dst->xscale = swap_f32(src->xscale);
+	dst->xscalefrac = swap_f32(src->xscalefrac);
+	dst->xscaleinc = swap_f32(src->xscaleinc);
+	dst->xscaleold = swap_f32(src->xscaleold);
+	dst->xscalenew = swap_f32(src->xscalenew);
+	dst->yscale = swap_f32(src->yscale);
+	dst->yscalefrac = swap_f32(src->yscalefrac);
+	dst->yscaleinc = swap_f32(src->yscaleinc);
+	dst->yscaleold = swap_f32(src->yscaleold);
+	dst->yscalenew = swap_f32(src->yscalenew);
+	dst->xmid = swap_f32(src->xmid);
+	dst->xmidfrac = swap_f32(src->xmidfrac);
+	dst->xmidinc = swap_f32(src->xmidinc);
+	dst->xmidold = swap_f32(src->xmidold);
+	dst->xmidnew = swap_f32(src->xmidnew);
+	dst->ymid = swap_f32(src->ymid);
+	dst->ymidfrac = swap_f32(src->ymidfrac);
+	dst->ymidinc = swap_f32(src->ymidinc);
+	dst->ymidold = swap_f32(src->ymidold);
+	dst->ymidnew = swap_f32(src->ymidnew);
+	dst->red = src->red;
+	dst->redold = src->redold;
+	dst->rednew = src->rednew;
+	dst->green = src->green;
+	dst->greenold = src->greenold;
+	dst->greennew = src->greennew;
+	dst->blue = src->blue;
+	dst->blueold = src->blueold;
+	dst->bluenew = src->bluenew;
+	dst->alpha = src->alpha;
+	dst->alphaold = src->alphaold;
+	dst->alphanew = src->alphanew;
+	dst->colfrac = swap_f32(src->colfrac);
+	dst->colinc = swap_f32(src->colinc);
+}
+
+void convertHovobj(struct hov* dst, struct hov* src)
+{
+	dst->type = src->type;
+	dst->flags = src->flags;
+	dst->unk04 = swap_f32(src->unk04);
+	dst->unk08 = swap_f32(src->unk08);
+	dst->unk0c = swap_f32(src->unk0c);
+	dst->unk10 = swap_f32(src->unk10);
+	dst->unk14 = swap_f32(src->unk14);
+	dst->unk18 = swap_f32(src->unk18);
+	dst->unk1c = swap_f32(src->unk1c);
+	dst->unk20 = swap_f32(src->unk20);
+	dst->unk24 = swap_f32(src->unk24);
+	dst->unk28 = swap_f32(src->unk28);
+	dst->unk2c = swap_f32(src->unk2c);
+	dst->unk30 = swap_f32(src->unk30);
+	dst->ground = swap_f32(src->ground);
+	dst->nexttick60 = swap_uint32(src->nexttick60);
+	dst->prevtick60 = swap_uint32(src->prevtick60);
+}
+
+void convertChraiCommand(u32 type, u8* cmd)
+{
+	switch(type) {
+		default: {
+			print("convertChraiCommand: unhandled ai cmd: %04x\n", type);
+		}
+	}
+}
+
+/*
+	Similar to modeldef, we need to load the N64 structure to a PC structure with different offsets
+*/
 void setupLoadFiles(s32 stagenum)
 {
 	s32 i;
@@ -1309,6 +1528,8 @@ void setupLoadFiles(s32 stagenum)
 		g_ModelStates[i].modeldef = NULL;
 	}
 
+	print("setupLoadFiles %x\n", stagenum);
+
 	if (stagenum < STAGE_TITLE) {
 		if (g_Vars.normmplayerisrunning) {
 			filenum = g_Stages[g_StageIndex].mpsetupfileid;
@@ -1318,17 +1539,590 @@ void setupLoadFiles(s32 stagenum)
 
 		g_LoadType = LOADTYPE_SETUP;
 
+		// Note PC: using fileLoadToNew, the loaded struct will be too small to hold our larger buffer
+		// TODO: need to allocate a buffer to store the new file, however we cannot calculate it's size in advance...
 		g_GeCreditsData = (u8 *)fileLoadToNew(filenum, FILELOADMETHOD_DEFAULT);
+		u32 allocsize = fileGetAllocationSize(filenum);
+		u32 loadedsize = fileGetLoadedSize(filenum);
+		print("allocsize %x loadedsize %x\n", allocsize, loadedsize);
+
+		// HACK: reserve 2x more size for this file
+		// In the future, we need to compute the exact size of the converted assets
+		fileSetSize(filenum, g_GeCreditsData, allocsize * 2, true);
+
+		u8* originalFileData = nativeMalloc(loadedsize);
+		memcpy(originalFileData, g_GeCreditsData, loadedsize);
+
+		struct stagesetup_load* setup_load = (struct stagesetup_load*)originalFileData;
 		setup = (struct stagesetup *)g_GeCreditsData;
 		langLoad(langGetLangBankIndexFromStagenum(stagenum));
 
-		g_StageSetup.intro = (s32 *)((uintptr_t)setup + (u32)setup->intro);
-		g_StageSetup.props = (u32 *)((uintptr_t)setup + (u32)setup->props);
-		g_StageSetup.paths = (struct path *)((uintptr_t)setup + (u32)setup->paths);
-		g_StageSetup.ailists = (struct ailist *)((uintptr_t)setup + (u32)setup->ailists);
+		// Convert the N64 struct to a PC struct
+		memset(setup, 0, loadedsize);
+		u32 fileWriteOffset = 0;
+		initOffsetsContext();
+
+		print("- g_StageSetup.waypoints %x\n", swap_uint32(setup_load->waypoints));
+		print("- g_StageSetup.waygroups %x\n", swap_uint32(setup_load->waygroups));
+		print("- g_StageSetup.cover %x\n", swap_uint32(setup_load->cover));
+		print("- g_StageSetup.intro %x\n", swap_int32(setup_load->intro));
+		print("- g_StageSetup.props %x\n", swap_uint32(setup_load->props));
+		print("- g_StageSetup.paths %x\n", swap_uint32(setup_load->paths));
+		print("- g_StageSetup.ailists %x\n", swap_uint32(setup_load->ailists));
+		print("- g_StageSetup.padfiledata %x\n", swap_uint32(setup_load->padfiledata));
+
+		fileWriteOffset += sizeof(struct stagesetup);
+
+		/*
+			props
+			first we must iterate the props as they were written in the original file format
+		*/
+		u32 objOffset = swap_uint32(setup_load->props);
+
+		if (objOffset != 0)
+		{
+			addOffsetGlobal(objOffset, fileWriteOffset, 0);
+
+			struct defaultobj_load* obj = (struct defaultobj_load*)((uintptr_t)setup_load + (uintptr_t)objOffset);
+
+			while (obj->type != OBJTYPE_END) {
+				//print("Converting OBJTYPE: %02x\n", obj->type);
+				// Note: some fields are read from the file, some others are generated but it's not explicit
+				// so lets convert all of them, theyll be overwritten anyway
+				switch (obj->type) 
+				{
+					case OBJTYPE_DOOR: {
+						struct doorobj_load* src = (struct doorobj_load*)(obj);
+						struct doorobj dst;
+						convertDefaultobj(&dst.base, obj);
+						dst.maxfrac = swap_f32(src->maxfrac);
+						dst.perimfrac = swap_f32(src->perimfrac);
+						dst.accel = swap_f32(src->accel);
+						dst.decel = swap_f32(src->decel);
+						dst.maxspeed = swap_f32(src->maxspeed);
+						dst.doorflags = swap_uint16(src->doorflags);
+						dst.doortype = swap_uint16(src->doortype);
+						dst.keyflags = swap_uint32(src->keyflags);
+						dst.autoclosetime = swap_int32(src->autoclosetime);
+						dst.frac = swap_f32(src->frac);
+						dst.fracspeed = swap_f32(src->fracspeed);
+						dst.mode = (src->mode);
+						dst.glasshits = (src->glasshits);
+						dst.fadealpha = swap_int16(src->fadealpha);
+						dst.xludist = swap_int16(src->xludist);
+						dst.opadist = swap_int16(src->opadist);
+						dst.startpos = src->startpos;
+						swap_coord(&dst.startpos);
+						// no need to set mtx98
+						dst.sibling = (struct doorobj*)(uintptr_t)swap_int32(src->sibling);
+						dst.lastopen60 = swap_int32(src->lastopen60);
+						dst.portalnum = swap_int16(src->portalnum);
+						dst.soundtype = src->soundtype;
+						dst.fadetime60 = src->fadetime60;
+						dst.lastcalc60 = swap_int32(src->lastcalc60);
+						dst.laserfade = src->laserfade;
+						for (u32 i = 0; i < 3; i++) dst.unusedmaybe[i] = src->unusedmaybe[i];
+						for (u32 i = 0; i < 4; i++) dst.shadeinfo1[i] = src->shadeinfo1[i];
+						for (u32 i = 0; i < 4; i++) dst.shadeinfo2[i] = src->shadeinfo2[i];
+						dst.actual1 = src->actual1;
+						dst.actual2 = src->actual2;
+						dst.extra1 = src->extra1;
+						dst.extra2 = src->extra2;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct doorobj));
+						fileWriteOffset += sizeof(struct doorobj);
+						break;
+					}
+
+					case OBJTYPE_TAG: {
+						struct tag_load* src = (struct tag_load*)(obj);
+						struct tag dst;
+
+						//dst.identifier = swap_uint32(src->identifier);
+						dst.identifier = src->identifier;
+						dst.tagnum = swap_uint16(src->tagnum);
+						dst.cmdoffset = swap_int16(src->cmdoffset);
+						dst.next = swap_uint32(src->next);
+						dst.obj = swap_uint32(src->obj);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct tag));
+						fileWriteOffset += sizeof(struct tag);
+						break;
+					}
+
+					case OBJTYPE_BASIC: {
+						struct defaultobj_load* src = (struct defaultobj_load*)(obj);
+						struct defaultobj dst;
+						convertDefaultobj(&dst, obj);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct defaultobj));
+						fileWriteOffset += sizeof(struct defaultobj);
+						break;
+					}
+
+					case OBJTYPE_GLASS: {
+						struct glassobj_load* src = (struct glassobj_load*)(obj);
+						struct glassobj dst;
+						convertDefaultobj(&dst.base, obj);
+						dst.portalnum = swap_int16(src->portalnum);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct glassobj));
+						fileWriteOffset += sizeof(struct glassobj);
+						break;
+					}
+
+					case OBJTYPE_LIFT: {
+						struct liftobj_load* src = (struct liftobj_load*)(obj);
+						struct liftobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						for (u32 i = 0; i < 4; i++) dst.pads[i] = swap_int16(src->pads[i]);
+						for (u32 i = 0; i < 4; i++) dst.doors[i] = swap_uint32(src->doors[i]);
+						dst.dist = swap_f32(src->dist);
+						dst.speed = swap_f32(src->speed);
+						dst.accel = swap_f32(src->accel);
+						dst.maxspeed = swap_f32(src->maxspeed);
+						dst.soundtype = src->soundtype;
+						dst.levelcur = src->levelcur;
+						dst.levelaim = src->levelaim;
+						dst.prevpos = src->prevpos;
+						swap_coord(&dst.prevpos);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct liftobj));
+						fileWriteOffset += sizeof(struct liftobj);
+						break;
+					}
+
+					case OBJTYPE_LINKLIFTDOOR: {
+						struct linkliftdoorobj_load* src = (struct linkliftdoorobj_load*)(obj);
+						struct linkliftdoorobj dst;
+						//dst.unk00 = swap_uint32(src->unk00);
+						dst.unk00 = (src->unk00);
+						dst.door = (struct prop *)(uintptr_t)swap_uint32(src->door);
+						dst.lift = (struct prop *)(uintptr_t)swap_uint32(src->lift);
+						dst.next = (struct linkliftdoorobj *)(uintptr_t)swap_uint32(src->next);
+						dst.stopnum = swap_int32(src->stopnum);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct linkliftdoorobj));
+						fileWriteOffset += sizeof(struct linkliftdoorobj);
+						break;
+					}
+					
+					case OBJTYPE_SINGLEMONITOR: {
+						struct singlemonitorobj_load* src = (struct singlemonitorobj_load*)(obj);
+						struct singlemonitorobj dst;
+						convertDefaultobj(&dst.base, obj);
+						convertTvscreenobj(&dst.screen, &src->screen);
+						
+						dst.owneroffset = swap_int16(src->owneroffset);
+						dst.ownerpart = src->ownerpart;
+						dst.imagenum = src->imagenum;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct singlemonitorobj));
+						fileWriteOffset += sizeof(struct singlemonitorobj);
+						break;
+					}
+
+					case OBJECTIVETYPE_HOLOGRAPH: {
+						struct criteria_holograph* src = (struct criteria_holograph*)(obj);
+						struct criteria_holograph dst;
+
+						//dst.unk00 = swap_uint32(src->unk00);
+						dst.unk00 = (src->unk00);
+						dst.obj = swap_uint32(src->obj);
+						dst.status = swap_uint32(src->status);
+						//struct criteria_holograph *next;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct criteria_holograph));
+						fileWriteOffset += sizeof(struct criteria_holograph);
+						break;
+					}
+
+					case OBJTYPE_CHR: {
+						struct packedchr* src = (struct packedchr*)(obj);
+						struct packedchr dst;
+						
+						dst.chrindex = swap_int16(src->chrindex);
+						dst.unk02 = src->unk02;
+						dst.typenum = src->typenum;
+						dst.spawnflags = swap_uint32(src->spawnflags);
+						dst.chrnum = swap_int16(src->chrnum);
+						dst.padnum = swap_uint16(src->padnum);
+						dst.bodynum = src->bodynum;
+						dst.headnum = src->headnum;
+						dst.ailistnum = swap_uint16(src->ailistnum);
+						dst.padpreset = swap_uint16(src->padpreset);
+						dst.chrpreset = swap_uint16(src->chrpreset);
+						dst.hearscale = swap_uint16(src->hearscale);
+						dst.viewdist = swap_uint16(src->viewdist);
+						dst.flags = swap_uint32(src->flags);
+						dst.flags2 = swap_uint32(src->flags2);
+						dst.team = src->team;
+						dst.squadron = src->squadron;
+						dst.chair = swap_int16(src->chair);
+						dst.convtalk = swap_uint32(src->convtalk);
+						dst.tude = src->tude;
+						dst.naturalanim = src->naturalanim;
+						dst.yvisang = src->yvisang;
+						dst.teamscandist = src->teamscandist;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct packedchr));
+						fileWriteOffset += sizeof(struct packedchr);
+						break;
+					}
+
+					case OBJTYPE_WEAPON: {
+						struct weaponobj* src = (struct weaponobj*)(obj);
+						struct weaponobj dst;
+						convertDefaultobj(&dst.base, obj);
+						dst.weaponnum = src->weaponnum;
+						dst.unk5d = src->unk5d;
+						dst.unk5e = src->unk5e;
+						dst.gunfunc = src->gunfunc;
+						dst.fadeouttimer60 = src->fadeouttimer60;
+						dst.dualweaponnum = src->dualweaponnum;
+						dst.timer240 = swap_int16(src->timer240);
+						dst.team = swap_int16(src->team);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct weaponobj));
+						fileWriteOffset += sizeof(struct weaponobj);
+						break;
+					}
+
+					case OBJTYPE_MULTIMONITOR: {
+						struct multimonitorobj_load* src = (struct multimonitorobj_load*)(obj);
+						struct multimonitorobj dst;
+						convertDefaultobj(&dst.base, obj);
+						for (u32 i = 0; i < 4; i++) convertTvscreenobj(&dst.screens[i], &src->screens[i]);
+						for (u32 i = 0; i < 4; i++) dst.imagenums[i] = src->imagenums[i];
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct multimonitorobj));
+						fileWriteOffset += sizeof(struct multimonitorobj);
+						break;
+					}
+
+					case OBJTYPE_CCTV: {
+						struct cctvobj_load* src = (struct cctvobj_load*)(obj);
+						struct cctvobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.lookatpadnum = swap_int16(src->lookatpadnum);
+						dst.toleft = swap_int16(src->toleft);
+						//Mtxf camrotm;
+						
+						dst.yzero = swap_f32(src->yzero);
+						dst.yrot = swap_f32(src->yrot);
+						dst.yleft = swap_f32(src->yleft);
+						dst.yright = swap_f32(src->yright);
+						dst.yspeed = swap_f32(src->yspeed);
+						dst.ymaxspeed = swap_f32(src->ymaxspeed);
+						dst.seebondtime60 = swap_int32(src->seebondtime60);
+						dst.maxdist = swap_f32(src->maxdist);
+						dst.xzero = swap_f32(src->xzero);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct cctvobj));
+						fileWriteOffset += sizeof(struct cctvobj);
+						break;
+					}
+
+					case OBJTYPE_HOVERPROP: {
+						struct hoverpropobj_load* src = (struct hoverpropobj_load*)(obj);
+						struct hoverpropobj dst;
+						convertDefaultobj(&dst.base, obj);
+						convertHovobj(&dst.hov, &src->hov);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct hoverpropobj));
+						fileWriteOffset += sizeof(struct hoverpropobj);
+						break;
+					}
+
+					case OBJTYPE_HOVERBIKE: {
+						struct hoverbikeobj_load* src = (struct hoverbikeobj_load*)(obj);
+						struct hoverbikeobj dst;
+						convertDefaultobj(&dst.base, obj);
+						convertHovobj(&dst.hov, &src->hov);
+
+						for (u32 i = 0; i < 2; i++) dst.speed[i] = swap_f32(src->speed[i]);
+						for (u32 i = 0; i < 2; i++) dst.prevpos[i] = swap_f32(src->prevpos[i]);
+						dst.w = swap_f32(src->w);
+						for (u32 i = 0; i < 2; i++) dst.rels[i] = swap_f32(src->rels[i]);
+						dst.exreal = swap_f32(src->exreal);
+						dst.ezreal = swap_f32(src->ezreal);
+						dst.ezreal2 = swap_f32(src->ezreal2);
+						dst.leanspeed = swap_f32(src->leanspeed);
+						dst.leandiff = swap_f32(src->leandiff);
+						dst.maxspeedtime240 = swap_uint32(src->maxspeedtime240);
+						for (u32 i = 0; i < 2; i++) dst.speedabs[i] = swap_f32(src->speedabs[i]);
+						for (u32 i = 0; i < 2; i++) dst.speedrel[i] = swap_f32(src->speedrel[i]);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct hoverbikeobj));
+						fileWriteOffset += sizeof(struct hoverbikeobj);
+						break;
+					}
+
+					case OBJTYPE_AUTOGUN: {
+						struct autogunobj_load* src = (struct autogunobj_load*)(obj);
+						struct autogunobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.targetpad = swap_int16(src->targetpad);
+						dst.firing = src->firing;
+						dst.firecount = src->firecount;
+
+						dst.yzero = swap_f32(src->yzero);
+						dst.ymaxleft = swap_f32(src->ymaxleft);
+						dst.ymaxright = swap_f32(src->ymaxright);
+						dst.yrot = swap_f32(src->yrot);
+						dst.yspeed = swap_f32(src->yspeed);
+						dst.xzero = swap_f32(src->xzero);
+						dst.xrot = swap_f32(src->xrot);
+						dst.xspeed = swap_f32(src->xspeed);
+						dst.maxspeed = swap_f32(src->maxspeed);
+						dst.aimdist = swap_f32(src->aimdist);
+						dst.barrelspeed = swap_f32(src->barrelspeed);
+						dst.barrelrot = swap_f32(src->barrelrot);
+
+						dst.lastseebond60 = swap_int32(src->lastseebond60);
+						dst.lastaimbond60 = swap_int32(src->lastaimbond60);
+						dst.allowsoundframe = swap_int32(src->allowsoundframe);
+						dst.beam = swap_uint32(src->beam);
+						dst.shotbondsum = swap_f32(src->shotbondsum);
+						dst.target = swap_uint32(src->target);
+						dst.targetteam = src->targetteam;
+						dst.ammoquantity = src->ammoquantity;
+						dst.nextchrtest = swap_int16(src->nextchrtest);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct autogunobj));
+						fileWriteOffset += sizeof(struct autogunobj);
+						break;
+					}
+
+					default: {
+						print("Unhandled OBJTYPE: %02x\n", obj->type);
+						exit(1);
+					}
+				}
+
+
+				obj = (struct defaultobj_load *)((uintptr_t)obj + (uintptr_t)setupGetCmdLengthLoad((u32*)obj) * 4);
+			}
+
+			{
+				// Write objtype end
+				struct defaultobj* writePtr = (struct defaultobj*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				writePtr->type = OBJTYPE_END;
+				fileWriteOffset += sizeof(u32);
+			}
+		}
+
+		/*
+			intro
+			intro is a pointer to a list of 32 bits commands, calculate the length of the command list
+			and copy it in the new structure. We can walk the commands list to find out its size
+		*/
+		{
+			s32* introPtr = (s32 *)((uintptr_t)setup_load + (u32)swap_int32(setup_load->intro));
+			u32 introSize = setupCalculateIntroSize(introPtr);
+			print("intro size %x bytes\n", introSize * 4);
+
+			addOffsetGlobal(swap_int32(setup_load->intro), fileWriteOffset, 0);
+			s32* intro = (s32*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+
+			u32* cmd = introPtr;
+			for (u32 k = 0; k < introSize; k++)
+			{
+				s32* writePtr = (s32*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				*writePtr = swap_int32(*cmd);
+
+				fileWriteOffset += 4;
+				cmd++;
+			}
+
+			// Write intro end
+			{
+				s32* writePtr = (s32*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				*writePtr = INTROCMD_END;
+				fileWriteOffset += 4;
+			}
+
+			// Then we need to convert the actual content of the intro cmds
+			//print("setupConvertIntroCmd introSize: %x\n", introSize);
+			//setupConvertIntroCmd(intro);
+		}
+
+		g_StageSetup.intro = (s32 *)((uintptr_t)setup + (u32)replaceOffsetGlobal(swap_int32(setup_load->intro)));
+		print("- g_StageSetup.intro %llx\n", g_StageSetup.intro);
+
+		g_StageSetup.props = (u32 *)((uintptr_t)setup + (u32)replaceOffsetGlobal(objOffset));
+		print("- g_StageSetup.props %llx\n", g_StageSetup.props);
+
+		// Iterate objects again to test if the conversion worked
+		{
+			struct defaultobj* obj = (struct defaultobj*)(g_StageSetup.props);
+
+			while (obj->type != OBJTYPE_END) {
+				//print("Reading OBJTYPE: %02x\n", obj->type);
+				obj = (struct defaultobj *)((uintptr_t)obj + (uintptr_t)setupGetCmdLength((u32*)obj) * 4);
+			}
+		}
+
+		/*
+			paths
+		*/
+		if (setup_load->paths)
+		{
+			u32 pathsOffset = swap_uint32(setup_load->paths);
+			print("pathsOffset: %x\n", pathsOffset);
+
+			addOffsetGlobal(pathsOffset, fileWriteOffset, 0);
+
+			// Parse the list once to copy the path structure
+			struct path_load* srcPathList = (struct path_load*)((uintptr_t)setup_load + pathsOffset);
+			for (u32 i = 0; swap_uint32(srcPathList[i].pads) != NULL; i++) {
+				struct path dst;
+
+				dst.pads = (s32*)swap_uint32(srcPathList[i].pads);
+				dst.id = srcPathList[i].id;
+				dst.flags = srcPathList[i].flags;
+				dst.len = swap_uint16(srcPathList[i].len);
+
+				u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				memcpy(writePtr, &dst, sizeof(struct path));
+				fileWriteOffset += sizeof(struct path);
+			}
+
+			// End the list with a path ending the structure
+			{
+				struct path dst = { NULL, 0, 0, 0 };
+				u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				memcpy(writePtr, &dst, sizeof(struct path));
+				fileWriteOffset += sizeof(struct path);
+			}
+
+			struct path* paths = (struct path*)((uintptr_t)setup + (uintptr_t)replaceOffsetGlobal(pathsOffset));
+			for (u32 i = 0; paths[i].pads != NULL; i++) {
+				// Copy the pads
+				//print("pads: %x\n", paths[i].pads);
+				s32* padsSrc = (s32*)((uintptr_t)setup_load + (uintptr_t)paths[i].pads);
+				s32* padsDst = (s32*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				u32 padsLength = 0;
+
+				for (u32 j = 0; swap_int32(padsSrc[j]) >= 0; j++) {
+					//print(" %x\n", swap_int32(padsSrc[j]));
+					padsDst[j] = swap_int32(padsSrc[j]);
+					padsLength++;
+				}
+
+				if (padsLength > 0) 
+				{
+					//addOffsetGlobal(dst.pads, fileWriteOffset, 0);
+					paths[i].pads = fileWriteOffset;
+					//print("pads written at: %x\n", paths[i].pads);
+
+					padsDst[padsLength] = -1;
+					fileWriteOffset += (padsLength + 1) * sizeof(s32);
+				}
+
+
+			}
+			
+			g_StageSetup.paths = (struct path*)((uintptr_t)setup + (uintptr_t)replaceOffsetGlobal(pathsOffset));
+
+			// TODO: need to copy the pads as well?
+		}
+
+		/*
+			ailists
+		*/
+		print("setup_load->ailists: %x\n", swap_uint32(setup_load->ailists));
+		if (setup_load->ailists)
+		{
+			// First iterate and copy the list
+			struct ailist_load* listSrc = (struct ailist_load*)((uintptr_t)setup_load + (uintptr_t)swap_uint32(setup_load->ailists));
+			struct ailist* listDst = (struct ailist*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+
+			//addOffsetGlobal(swap_uint32(setup_load->ailists), fileWriteOffset, 0);
+			g_StageSetup.ailists = (struct ailist *)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+
+			for (u32 i = 0; listSrc[i].list != NULL; i++) {
+				struct ailist ailist = { swap_uint32(listSrc[i].list), swap_uint32(listSrc[i].id) };
+				//print("ailist: %x id %x\n", ailist.list, ailist.id);
+				listDst[i] = ailist;
+				fileWriteOffset += sizeof(struct ailist);
+			}
+
+			{
+				// Write last element
+				struct ailist ailist = { 0, 0 };
+				struct ailist* dst = (struct ailist*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+				*dst = ailist;
+				fileWriteOffset += sizeof(struct ailist);
+			}
+
+			// Then we iterate again to copy the actual ailist commands
+			for (u32 i = 0; g_StageSetup.ailists[i].list != NULL; i++) {
+				//print("ailist2: %x id %x\n", g_StageSetup.ailists[i].list, g_StageSetup.ailists[i].id);
+
+				/*
+					We should parse the list of commands and copy it to our new structure
+					However, the structure is written in big endian. But the size of each AI cmd fields
+					is not explicit. We must refer to the code that uses it to convert each field (see chraicommands.c)
+				*/
+				u8 *cmd = (u8*)((uintptr_t)setup_load + (uintptr_t)g_StageSetup.ailists[i].list);
+				u8 *cmdDst = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+
+				g_StageSetup.ailists[i].list = fileWriteOffset;
+
+				while (true) {
+					s32 type = (cmd[0] << 8) + cmd[1];
+					u32 len = chraiGetCommandLength(cmd, 0);
+					//print(" - cmd: %04x len %x\n", type, len);
+
+					for (u32 j = 0; j < len; j++) {
+						cmdDst[j] = cmd[j];
+					}
+
+					// Here we copy the commands but we don't convert the content
+					// It's a lot to convert and it has to be done manually...
+					//convertChraiCommand(type, cmdDst);
+
+					cmd += len;
+					cmdDst += len;
+					fileWriteOffset += len;
+
+					if (type == AICMD_END) {
+						break;
+					}
+				}
+			}
+		}
+
+		nativeFree(originalFileData);
+		clearOffsetsContext();
+
+		print("allocsize %x loadedsize %x new size %x\n", allocsize, loadedsize, fileWriteOffset);
+		//fileSetSize(filenum, setup, fileWriteOffset, true);
+
+		// --- end of convert
 
 		g_LoadType = LOADTYPE_PADS;
 
+		// TODO: convert padfiledata...
 		g_StageSetup.padfiledata = fileLoadToNew(g_Stages[g_StageIndex].padsfileid, FILELOADMETHOD_DEFAULT);
 
 		g_StageSetup.waypoints = NULL;
@@ -1338,7 +2132,7 @@ void setupLoadFiles(s32 stagenum)
 		// Convert ailist pointers from file-local to proper pointers
 		if (g_StageSetup.ailists) {
 			for (i = 0; g_StageSetup.ailists[i].list != NULL; i++) {
-				g_StageSetup.ailists[i].list = (u8 *)((uintptr_t)setup + (u32)g_StageSetup.ailists[i].list);
+				g_StageSetup.ailists[i].list = (u8 *)((uintptr_t)setup + (uintptr_t)g_StageSetup.ailists[i].list);
 			}
 		}
 
@@ -1382,7 +2176,7 @@ void setupLoadFiles(s32 stagenum)
 		// and calculate the path lengths
 		if (g_StageSetup.paths) {
 			for (i = 0; g_StageSetup.paths[i].pads != NULL; i++) {
-				g_StageSetup.paths[i].pads = (s32 *)((uintptr_t)g_StageSetup.paths[i].pads + (u32)setup);
+				g_StageSetup.paths[i].pads = (s32 *)((uintptr_t)g_StageSetup.paths[i].pads + (uintptr_t)setup);
 
 				for (j = 0; g_StageSetup.paths[i].pads[j] >= 0; j++);
 

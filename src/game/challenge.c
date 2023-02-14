@@ -374,6 +374,8 @@ struct mpconfigfull *challengeLoadConfig(s32 confignum, u8 *buffer, s32 len)
 	struct mpstrings *loadedstrings;
 	s32 bank;
 	u32 language_id = langGetFileNumOffset();
+
+	/*
 	extern struct mpconfig _mpconfigsSegmentRomStart[];
 	extern struct mpstrings _mpstringsESegmentRomStart;
 	extern struct mpstrings _mpstringsJSegmentRomStart;
@@ -389,7 +391,21 @@ struct mpconfigfull *challengeLoadConfig(s32 confignum, u8 *buffer, s32 len)
 	extern struct mpstrings _mpstringsFSegmentRomEnd;
 	extern struct mpstrings _mpstringsSSegmentRomEnd;
 	extern struct mpstrings _mpstringsISegmentRomEnd;
+	*/
 
+	/*
+	mpstring E - start:0x7d1c20 - end:0x7d5320
+	mpstring J - start:0x7d5320 - end:0x7d8a20
+	mpstring P - start:0x7d8a20 - end:0x7dc120
+	mpstring G - start:0x7dc120 - end:0x7df820
+	mpstring F - start:0x7df820 - end:0x7e2f20
+	mpstring S - start:0x7e2f20 - end:0x7e6620
+	mpstring I - start:0x7e6620 - end:0x7e9d20
+	*/
+
+	u32 _mpconfigsSegmentRomStart = 0x007d0a40;
+
+	/*
 	s32 banks[][2] = {
 		{ (s32)&_mpstringsESegmentRomStart, (s32)&_mpstringsESegmentRomEnd },
 		{ (s32)&_mpstringsJSegmentRomStart, (s32)&_mpstringsJSegmentRomEnd },
@@ -399,9 +415,20 @@ struct mpconfigfull *challengeLoadConfig(s32 confignum, u8 *buffer, s32 len)
 		{ (s32)&_mpstringsSSegmentRomStart, (s32)&_mpstringsSSegmentRomEnd },
 		{ (s32)&_mpstringsISegmentRomStart, (s32)&_mpstringsISegmentRomEnd },
 	};
+	*/
+	s32 banks[][2] = {
+		{ (s32)0x7d1c20, (s32)0x7d5320 },
+		{ (s32)0x7d5320, (s32)0x7d8a20 },
+		{ (s32)0x7d8a20, (s32)0x7dc120 },
+		{ (s32)0x7dc120, (s32)0x7df820 },
+		{ (s32)0x7df820, (s32)0x7e2f20 },
+		{ (s32)0x7e2f20, (s32)0x7e6620 },
+		{ (s32)0x7e6620, (s32)0x7e9d20 },
+	};
 
 	// Load mpconfigs
-	mpconfig = dmaExecWithAutoAlign(buffer, (s32)&_mpconfigsSegmentRomStart[confignum], sizeof(struct mpconfig));
+	//mpconfig = dmaExecWithAutoAlign(buffer, (s32)&_mpconfigsSegmentRomStart[confignum], sizeof(struct mpconfig));
+	mpconfig = dmaExecWithAutoAlign(buffer, (s32)_mpconfigsSegmentRomStart + confignum * sizeof(struct mpconfig), sizeof(struct mpconfig));
 
 	// Load mpstrings
 	bank = banks[language_id][0];

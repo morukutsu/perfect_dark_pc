@@ -38,23 +38,25 @@ u32 var80062494 = 0x00000001;
 s32 var80062498 = 0;
 u32 var8006249c = 0x00000000;
 
+/*
 extern u8 var020043f8;
 extern u8 var02004468;
 extern u8 var02004700;
 extern u8 var02004d28;
 extern u8 var02004dc8;
 extern u8 var02005dd0;
+*/
 
-/**
- * This is a dirty, dirty hack. getitle0f0155f0 only matches if arg2 is a u8.
- * But if arg2 is a u8, the caller casts it which creates a mismatch in the
- * caller. To work around this, we declare a dummy function using u32, then
- * the linker is configured to link the dummy function to the same address as
- * the real one, and we make the caller call the dummy function.
- *
- * @TODO figure out how to fix this properly.
- */
-Gfx *getitle0f0155f0_hack(Gfx *gdl, s32 arg1, u32 arg2);
+u32 _getitleSegmentRomStart = 0x007ebdc0;
+u32 _getitleSegmentStart = 32 * 1024 * 1024;
+u32 _getitleSegmentEnd = 32 * 1024 * 1024 + 0x65d0;
+
+u32 var020043f8 = 32 * 1024 * 1024 + 0x43f8;
+u32 var02004468 = 32 * 1024 * 1024 + 0x4468;
+u32 var02004700 = 32 * 1024 * 1024 + 0x4700;
+u32 var02004d28 = 32 * 1024 * 1024 + 0x4d28;
+u32 var02004dc8 = 32 * 1024 * 1024 + 0x4dc8;
+u32 var02005dd0 = 32 * 1024 * 1024 + 0x5dd0;
 
 Gfx *getitle0f0155f0(Gfx *gdl, s32 arg1, u8 arg2)
 {
@@ -138,13 +140,24 @@ Gfx *getitle0f0155f0(Gfx *gdl, s32 arg1, u8 arg2)
 	return gdl;
 }
 
-extern u8 _getitleSegmentRomStart;
-extern u8 _getitleSegmentStart;
-extern u8 _getitleSegmentEnd;
+/**
+ * This is a dirty, dirty hack. getitle0f0155f0 only matches if arg2 is a u8.
+ * But if arg2 is a u8, the caller casts it which creates a mismatch in the
+ * caller. To work around this, we declare a dummy function using u32, then
+ * the linker is configured to link the dummy function to the same address as
+ * the real one, and we make the caller call the dummy function.
+ *
+ * @TODO figure out how to fix this properly.
+ */
+//Gfx *getitle0f0155f0_hack(Gfx *gdl, s32 arg1, u32 arg2);
+Gfx *getitle0f0155f0_hack(Gfx *gdl, s32 arg1, u32 arg2)
+{
+	return getitle0f0155f0(gdl, arg1, (u8)arg2);
+}
 
 void getitleLoad(void *addr, u32 arg1)
 {
-	u32 len = (romptr_t)&_getitleSegmentEnd - (romptr_t)&_getitleSegmentStart;
+	u32 len = (romptr_t)_getitleSegmentEnd - (romptr_t)_getitleSegmentStart;
 
 	var80062414 = 0;
 	var8009cc8c = 880;
@@ -152,7 +165,7 @@ void getitleLoad(void *addr, u32 arg1)
 	var80062498 = 0;
 	var8009cc90 = addr;
 
-	dmaExec(var8009cc90, (romptr_t) &_getitleSegmentRomStart, ALIGN64(len));
+	dmaExec(var8009cc90, (romptr_t) _getitleSegmentRomStart, ALIGN64(len));
 }
 
 Gfx *getitleRender(Gfx *gdl)

@@ -48,7 +48,9 @@ void amgrMain(void *arg);
 
 void amgrInit(void)
 {
+#if 0
 	g_AudioSp = bootAllocateStack(THREAD_AUDIO, STACKSIZE_AUDIO);
+#endif
 }
 
 #if VERSION >= VERSION_PAL_BETA
@@ -57,6 +59,7 @@ void amgrCreate(ALSynConfig *config, u32 *settings)
 void amgrCreate(ALSynConfig *config)
 #endif
 {
+#if 0
 	f32 freqpertick;
 	s32 i;
 
@@ -143,6 +146,7 @@ void amgrCreate(ALSynConfig *config)
 	n_alInit(&g_AudioManager.g, config);
 	func00030bfc(0, 60);
 	osCreateThread(&g_AudioManager.thread, THREAD_AUDIO, &amgrMain, 0, g_AudioSp, THREADPRI_AUDIO);
+#endif
 }
 
 s8 g_AudioIsThreadRunning = false;
@@ -174,6 +178,7 @@ extern u32 g_AdmaCurFrame;
 
 void amgrMain(void *arg)
 {
+#if 0
 	s32 count = 0;
 	bool done = false;
 	s16 *msg = NULL;
@@ -231,10 +236,12 @@ void amgrMain(void *arg)
 	}
 
 	n_alClose(&g_AudioManager.g);
+#endif
 }
 
 void amgrHandleFrameMsg(AudioInfo *info, AudioInfo *previnfo)
 {
+#if 0
 	u32 somevalue;
 	s16 *outbuffer;
 	Acmd *datastart;
@@ -292,6 +299,7 @@ void amgrHandleFrameMsg(AudioInfo *info, AudioInfo *previnfo)
 	g_AmgrCurrentCmdList->list.t.yield_data_size = 0;
 
 	var8005cf90 ^= 1;
+#endif
 }
 
 void amgrHandleDoneMsg(AudioInfo *info)

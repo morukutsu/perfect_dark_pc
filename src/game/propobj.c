@@ -4236,7 +4236,12 @@ void ammocrateTick(struct prop *prop)
  * function with the third argument and link it to the same address as
  * nbombCreateStorm via the linker config.
  */
-void nbombCreateStorm_hack(struct coord *pos, struct prop *ownerprop, struct prop *nbombprop);
+//void nbombCreateStorm_hack(struct coord *pos, struct prop *ownerprop, struct prop *nbombprop);
+void nbombCreateStorm_hack(struct coord *pos, struct prop *ownerprop, struct prop *nbombprop)
+{
+	nbombCreateStorm(pos, ownerprop);
+}
+
 
 /**
  * Handles the following:
@@ -13304,7 +13309,12 @@ Gfx *tvscreenRender(struct model *model, struct modelnode *node, struct tvscreen
 		gSPMatrix(gdl++, osVirtualToPhysical(model->matrices), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 		gSPSegment(gdl++, SPSEGMENT_MODEL_VTX, osVirtualToPhysical(vertices));
 		gDPSetColorArray(gdl++, osVirtualToPhysical(colours), 1);
-		gDPSetVerticeArray(gdl++, SPSEGMENT_MODEL_VTX << 24, 4);
+
+		// Don't wanna implement a special case in the PC renderer just for this
+		// Just pass directly the address of the vertices
+		//gDPSetVerticeArray(gdl++, SPSEGMENT_MODEL_VTX << 24, 4);
+		gDPSetVerticeArray(gdl++, osVirtualToPhysical(vertices), 4);
+
 		gDPTri2(gdl++, 0, 1, 2, 0, 2, 3);
 		gSPEndDisplayList(gdl++);
 

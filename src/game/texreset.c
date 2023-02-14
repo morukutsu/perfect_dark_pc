@@ -11,6 +11,9 @@
 #include "textureconfig.h"
 #include "types.h"
 
+#include "print.h"
+#include "byteswap.h"
+
 void texSetBitstring(u8 *arg0)
 {
 	var800ab540 = arg0;
@@ -37,20 +40,27 @@ extern Gfx *g_TexGdl3;
 extern struct textureconfig *g_TexRedLinesConfigs;
 extern struct textureconfig *g_TexSkyConfigs;
 
-extern u8 _textureconfigSegmentRomStart;
-extern u8 _textureconfigSegmentStart;
-extern u8 _textureconfigSegmentEnd;
+u32 _textureconfigSegmentRomStart = 0x007eb270;
+u32 _textureconfigSegmentStart = 0x007eb270;
+u32 _textureconfigSegmentEnd = 0x007ebdc0;
 
 void texReset(void)
 {
 	s32 stage;
-	u32 len = &_textureconfigSegmentEnd - &_textureconfigSegmentStart;
+	u32 len = _textureconfigSegmentEnd - _textureconfigSegmentStart;
 	s32 i;
 
-	g_TextureConfigSegment = mempAlloc(len, MEMPOOL_STAGE);
-	dmaExec(g_TextureConfigSegment, (romptr_t)&_textureconfigSegmentRomStart, len);
+	debugPrint(PC_DBG_FLAG_TEX, "texReset()\n");
 
-	g_TexBase = (uintptr_t)g_TextureConfigSegment - ROM_SIZE * 1024 * 1024;
+	g_TextureConfigSegment = mempAlloc(len, MEMPOOL_STAGE);
+	dmaExec(g_TextureConfigSegment, (romptr_t)_textureconfigSegmentRomStart, len);
+
+	//g_TexBase = (uintptr_t)g_TextureConfigSegment - ROM_SIZE * 1024 * 1024;
+	//g_TexBase = (uintptr_t)g_TextureConfigSegment;
+	
+	// Note PC: do we really need to load from ROM? the structures are in textureconfig.c
+	g_TexBase = 0;
+	
 	g_TexGdl1 = (Gfx *)(g_TexBase + (uintptr_t)g_TcGdl1);
 	g_TexGdl2 = (Gfx *)(g_TexBase + (uintptr_t)g_TcGdl2);
 	g_TexGdl3 = (Gfx *)(g_TexBase + (uintptr_t)g_TcGdl3);
@@ -72,16 +82,19 @@ void texReset(void)
 	g_TexGeneralConfigs = (struct textureconfig *)(g_TexBase + (uintptr_t)g_TcGeneralConfigs);
 	g_TexRadarConfigs = (struct textureconfig *)(g_TexBase + (uintptr_t)g_TcRadarConfigs);
 
-	g_TexNumConfigs = (len - (uintptr_t)&g_TcWallhitConfigs + ROM_SIZE * 1024 * 1024) / sizeof(struct textureconfig);
+	//g_TexNumConfigs = (len - (uintptr_t)&g_TcWallhitConfigs + ROM_SIZE * 1024 * 1024) / sizeof(struct textureconfig);
+	g_TexNumConfigs = (len) / sizeof(struct textureconfig_load);
 	g_TexWords = mempAlloc(ALIGN16(g_TexNumConfigs * 4), MEMPOOL_STAGE);
+
+	debugPrint(PC_DBG_FLAG_TEX, "- g_TexNumConfigs: %x\n", g_TexNumConfigs);
 
 	for (i = 0; i < g_TexNumConfigs; i++) {
 		g_TexWords[i] = NULL;
 	}
 
 	for (i = 0; i < ARRAYCOUNT(g_TcExplosionTexturePairs); i++) {
-		texLoad(&g_ExplosionTexturePairs[i].texturenum1, NULL, false);
-		texLoad(&g_ExplosionTexturePairs[i].texturenum2, NULL, false);
+		texLoad(&g_ExplosionTexturePairs[i].texturenum1, NULL, false, NULL);
+		texLoad(&g_ExplosionTexturePairs[i].texturenum2, NULL, false, NULL);
 	}
 
 	texLoadFromDisplayList(g_TexGdl1, 0, 0);

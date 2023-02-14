@@ -7,6 +7,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+
 u16 raceGetAnimSumAngleAsInt(s16 animnum, s32 frame, s32 endframe)
 {
 	s16 inttranslate[3];

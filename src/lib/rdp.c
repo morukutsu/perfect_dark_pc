@@ -6,6 +6,8 @@
 #include "lib/memp.h"
 #include "lib/sched.h"
 
+#include "gfx/gfxpc.h"
+
 ALIGNED16 u8 g_RdpDramStack[SP_DRAM_STACK_SIZE8];
 ALIGNED16 u8 g_RdpYieldData[0xb00];
 
@@ -65,6 +67,7 @@ extern u8 gspDataStart;
 
 void rdpInit(void)
 {
+#if 0
 	s32 size = 0x10000;
 
 	if (IS4MB()) {
@@ -73,10 +76,17 @@ void rdpInit(void)
 
 	g_RdpOutBufferStart = mempAlloc(size, MEMPOOL_PERMANENT);
 	g_RdpOutBufferEnd = (u16 *) ((uintptr_t) g_RdpOutBufferStart + size);
+#endif
 }
 
 void rdpCreateTask(Gfx *gdlstart, Gfx *gdlend, u32 arg2, void *msg)
 {
+	gfx_start();
+	gfx_execute_commands(gdlstart, gdlend);
+	gfx_extradata_clear();
+    //exit(1);
+	
+#if 0
 	OSScTask *sctask;
 	OSTask *task;
 
@@ -108,4 +118,5 @@ void rdpCreateTask(Gfx *gdlstart, Gfx *gdlend, u32 arg2, void *msg)
 
 	// Swap g_RdpCurTask
 	g_RdpCurTask = (struct rdptask *)((uintptr_t) g_RdpCurTask ^ (uintptr_t) &g_RdpTaskA ^ (uintptr_t) &g_RdpTaskB);
+#endif
 }

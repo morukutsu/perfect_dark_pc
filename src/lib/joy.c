@@ -200,6 +200,7 @@ void joyRecordPfsState(u8 pfsstate)
  */
 void joyCheckPfs(s32 arg0)
 {
+#if 0
 	static u32 thiscount = 0; // 8005eef4
 	static u32 prevcount = 0; // 8005eef8
 	static u32 doingit = false; // 8005eefc
@@ -252,6 +253,7 @@ void joyCheckPfs(s32 arg0)
 	if (arg0) {
 		// empty
 	}
+#endif
 #endif
 }
 #endif
@@ -370,11 +372,13 @@ void joy00013e84(void)
 		osRecvMesg(&g_PiMesgQueue, NULL, OS_MESG_BLOCK);
 		osContGetQuery(var80099f38);
 
+#if 0
 		for (i = 0; i < 4; i++) {
 			if (var80099f38[i].errno & CONT_NO_RESPONSE_ERROR) {
 				slots -= 1 << i;
 			}
 		}
+#endif
 
 		g_JoyConnectedControllers = slots;
 	}
@@ -500,6 +504,7 @@ void joy0001509cnb(void)
  */
 void joy00014238(void)
 {
+#if 0
 	static bool doingit = false;
 	s32 i;
 
@@ -518,10 +523,12 @@ void joy00014238(void)
 
 		doingit = false;
 	}
+#endif
 }
 
 void joyDebugJoy(void)
 {
+#if 0
 #if VERSION >= VERSION_NTSC_1_0
 	static u32 var8005ef08 = 0;
 
@@ -566,6 +573,7 @@ void joyDebugJoy(void)
 		joyConsumeSamples(&g_JoyData[0]);
 #endif
 	}
+#endif
 }
 
 #if VERSION >= VERSION_NTSC_1_0
@@ -582,11 +590,13 @@ const char var700541c0[] = "joyTickRetrace:joy%derrno%d->%d\n";
 
 s32 joyStartReadData(OSMesgQueue *mq)
 {
-	return osContStartReadData(mq);
+	//return osContStartReadData(mq);
+	return 0;
 }
 
 void joyReadData(void)
 {
+#if 0
 	s32 index = (g_JoyData[0].nextlast + 1) % 20;
 
 	if (index == g_JoyData[0].curstart) {
@@ -599,6 +609,7 @@ void joyReadData(void)
 
 	g_JoyData[0].nextlast = index;
 	g_JoyData[0].nextsecondlast = (g_JoyData[0].nextlast + 19) % 20;
+#endif
 }
 
 void joysTick(void)
@@ -982,6 +993,7 @@ s32 joyGetDataIndex(void)
 
 void joyDestroy(void)
 {
+#if 0
 	s32 i;
 
 	osCreateMesgQueue(&g_PiMesgQueue, var80099e90, ARRAYCOUNT(var80099e90));
@@ -994,11 +1006,13 @@ void joyDestroy(void)
 			osMotorStop(PFS(i));
 		}
 	}
+#endif
 }
 
 #if VERSION >= VERSION_NTSC_1_0
 void joyGetContpadNumsForPlayer(s8 playernum, s32 *pad1, s32 *pad2)
 {
+#if 0
 	if (g_Vars.normmplayerisrunning) {
 		*pad1 = g_Vars.playerstats[playernum].mpindex;
 		*pad2 = -1;
@@ -1013,11 +1027,13 @@ void joyGetContpadNumsForPlayer(s8 playernum, s32 *pad1, s32 *pad2)
 	}
 
 	*pad2 = -1;
+#endif
 }
 #endif
 
 void joyStopRumble(s8 arg0, bool disablepolling)
 {
+#if 0
 	if (arg0 != SAVEDEVICE_GAMEPAK) {
 #if VERSION >= VERSION_NTSC_1_0
 		s32 device = arg0;
@@ -1056,11 +1072,12 @@ void joyStopRumble(s8 arg0, bool disablepolling)
 			g_Paks[device].rumblettl = -1;
 		}
 	}
+#endif
 }
 
 s32 joy000155b4(s8 device)
 {
-	return g_Paks[device].unk010;
+	//return g_Paks[device].unk010;
 }
 
 s32 joy000155f4(s8 device)
@@ -1070,6 +1087,7 @@ s32 joy000155f4(s8 device)
 
 void joysTickRumble(void)
 {
+#if 0
 	s32 i;
 
 	for (i = 0; i < 4; i++) {
@@ -1115,4 +1133,5 @@ void joysTickRumble(void)
 			}
 		}
 	}
+#endif
 }

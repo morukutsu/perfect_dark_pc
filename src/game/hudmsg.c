@@ -106,7 +106,11 @@ s32 hudmsgIsZoomRangeVisible(void)
  * with the return type we need, and link it to the same address as viGetHeight
  * via the linker config.
  */
-extern s32 viGetHeight_hack(void);
+//extern s32 viGetHeight_hack(void);
+s32 viGetHeight_hack()
+{
+	return viGetHeight();
+}
 
 Gfx *hudmsgRenderMissionTimer(Gfx *gdl, u32 alpha)
 {

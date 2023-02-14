@@ -10,6 +10,9 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+#include "byteswap.h"
+
 /**
  * Officially, the NTSC versions are American English only, while the PAL
  * versions support British English, French, German, Italian and Spanish, and
@@ -310,7 +313,8 @@ struct jpncharpixels *langGetJpnCharPixels(s32 codepoint)
 		g_JpnCacheCacheItems[freeindexsingle].ttl = 2;
 		g_JpnCacheCacheItems[freeindexsingle].codepoint = codepoint >> 1;
 
-		dmaExec(&g_JpnCharCachePixels[freeindexsingle * 8], (romptr_t) &_fontjpnsingleSegmentRomStart + (codepoint >> SHIFTAMOUNT) * 0x60, 0x60);
+		u32 jpnSingleStartNTSCFinal = 0x194b20;
+		dmaExec(&g_JpnCharCachePixels[freeindexsingle * 8], (romptr_t) jpnSingleStartNTSCFinal + (codepoint >> SHIFTAMOUNT) * 0x60, 0x60);
 
 		return &g_JpnCharCachePixels[freeindexsingle * 8];
 	}
@@ -321,7 +325,8 @@ struct jpncharpixels *langGetJpnCharPixels(s32 codepoint)
 		g_JpnCacheCacheItems[freeindexmulti + 0].codepoint = codepoint >> 1;
 		g_JpnCacheCacheItems[freeindexmulti + 1].codepoint = codepoint >> 1;
 
-		dmaExec(&g_JpnCharCachePixels[freeindexmulti * 8], (romptr_t) &_fontjpnmultiSegmentRomStart + ((codepoint & 0x1fff) >> SHIFTAMOUNT) * 0x80, 0x80);
+		u32 jpnMultiStartNTSCFinal = 0x19fb40;
+		dmaExec(&g_JpnCharCachePixels[freeindexmulti * 8], (romptr_t) jpnMultiStartNTSCFinal + ((codepoint & 0x1fff) >> SHIFTAMOUNT) * 0x80, 0x80);
 
 		return &g_JpnCharCachePixels[freeindexmulti * 8];
 	}
@@ -357,6 +362,8 @@ s32 langGetFileId(s32 bank)
 
 void langLoad(s32 bank)
 {
+	debugPrint(PC_DBG_FLAG_GAME, "langLoad bank %x\n", bank);
+
 #if VERSION >= VERSION_PAL_BETA
 	s32 len = fileGetInflatedSize(langGetFileId(bank));
 
@@ -399,11 +406,13 @@ char *langGet(s32 textid)
 {
 	s32 bankindex = textid >> 9;
 	s32 textindex = textid & 0x1ff;
+
 	u32 *bank = g_LangBanks[bankindex];
-	u32 addr;
+
+	uintptr_t addr;
 
 	if (bank && bank[textindex]) {
-		addr = (uintptr_t)bank + bank[textindex];
+		addr = (uintptr_t)bank + swap_uint32(bank[textindex]);
 	} else {
 		addr = 0;
 	}

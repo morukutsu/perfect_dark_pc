@@ -18,6 +18,9 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+#include "byteswap.h"
+
 /**
  * -- Model Definitions --
  *
@@ -422,7 +425,10 @@ void *modelGetNodeRwData(struct model *model, struct modelnode *node)
 		}
 	}
 
-	return &rwdatas[index];
+	// Note: rwdatas is allocated as a buffer of u32, we must compute the slot differently here
+	// since pointers are 64bits now
+	u32* ptr = (u32*)rwdatas;
+	return &ptr[index];
 }
 #endif
 
@@ -3158,7 +3164,12 @@ void modelRenderNodeGundl(struct modelrenderdata *renderdata, struct model *mode
 	}
 
 	if ((renderdata->flags & MODELRENDERFLAG_OPA) && rodata->opagdl) {
-		gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_COL1, osVirtualToPhysical(rodata->baseaddr));
+		/*
+			Note: PC, we don't need to emulate gSPSegment, just pass program addresses
+			to display lists functions
+		*/
+		//gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_COL1, osVirtualToPhysical(rodata->baseaddr));
+		gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_COL1, rodata->baseaddr);
 
 		if (renderdata->cullmode) {
 			modelApplyCullMode(renderdata);
@@ -3179,7 +3190,9 @@ void modelRenderNodeGundl(struct modelrenderdata *renderdata, struct model *mode
 			break;
 		}
 
-		gSPDisplayList(renderdata->gdl++, rodata->opagdl);
+		//gSPDisplayList(renderdata->gdl++, rodata->opagdl);
+		// Here we can use the segment addr instead of adding here?
+		gSPDisplayList(renderdata->gdl++, (uintptr_t)rodata->baseaddr + (uintptr_t)rodata->opagdl);
 
 		if (rodata->unk12 == 3 && rodata->xlugdl) {
 			modelApplyRenderModeType3(renderdata, false);
@@ -3237,12 +3250,19 @@ void modelRenderNodeDl(struct modelrenderdata *renderdata, struct model *model, 
 			gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_VTX, osVirtualToPhysical(rwdata->dl.vertices));
 			gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_COL2, osVirtualToPhysical(rwdata->dl.colours));
 
-			gSPDisplayList(renderdata->gdl++, rwdata->dl.gdl);
-
+			// Note: sometimes the rwdata is a real memory address, sometimes it an offset to the modeldef
+			// We need to detect this here...
+			// Using this heuristic: in modelInitRwData() rwdata->dl is initialized to rodata->dl.opagdl
+			if (rwdata->dl.gdl == rodata->dl.opagdl) {
+				gSPDisplayList(renderdata->gdl++, ((uintptr_t)rodata->dl.colourtable + (uintptr_t)rwdata->dl.gdl));
+			} else {
+				gSPDisplayList(renderdata->gdl++, (uintptr_t)rwdata->dl.gdl);
+			}
+			
 			if (rodata->dl.mcount == 3 && rodata->dl.xlugdl) {
 				modelApplyRenderModeType3(renderdata, false);
 
-				gSPDisplayList(renderdata->gdl++, rodata->dl.xlugdl);
+				gSPDisplayList(renderdata->gdl++, (Gfx*)((uintptr_t)rodata->dl.colourtable + (uintptr_t)rodata->dl.xlugdl));
 			}
 		}
 	}
@@ -3262,7 +3282,7 @@ void modelRenderNodeDl(struct modelrenderdata *renderdata, struct model *model, 
 
 			modelApplyRenderModeType4(renderdata, false);
 
-			gSPDisplayList(renderdata->gdl++, rodata->dl.xlugdl);
+			gSPDisplayList(renderdata->gdl++, (Gfx*)((uintptr_t)rodata->dl.colourtable + (uintptr_t)rodata->dl.xlugdl));
 		}
 	}
 }
@@ -3504,7 +3524,7 @@ void modelRender(struct modelrenderdata *renderdata, struct model *model)
 	u32 type;
 	struct modelnode *node = model->definition->rootnode;
 
-	gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_MTX, osVirtualToPhysical(model->matrices));
+	gSPSegment(renderdata->gdl++, SPSEGMENT_MODEL_MTX, model->matrices);
 
 	while (node) {
 		type = node->type & 0xff;
@@ -3853,10 +3873,10 @@ s32 modelTestForHit(struct model *model, struct coord *arg1, struct coord *arg2,
 	if (var) \
 		var = (void *)((uintptr_t)var + diff)
 
-void modelPromoteNodeOffsetsToPointers(struct modelnode *node, u32 vma, u32 fileramaddr)
+void modelPromoteNodeOffsetsToPointers(struct modelnode *node, u32 vma, u64 fileramaddr)
 {
 	union modelrodata *rodata;
-	s32 diff = fileramaddr - vma;
+	s64 diff = fileramaddr - vma;
 
 	while (node) {
 		u32 type = node->type & 0xff;
@@ -3949,7 +3969,7 @@ void modelPromoteNodeOffsetsToPointers(struct modelnode *node, u32 vma, u32 file
  */
 void modelPromoteOffsetsToPointers(struct modeldef *modeldef, u32 vma, uintptr_t fileramaddr)
 {
-	s32 diff = fileramaddr - vma;
+	s64 diff = fileramaddr - vma;
 	s32 i;
 	s16 *partnums;
 
@@ -3960,7 +3980,7 @@ void modelPromoteOffsetsToPointers(struct modeldef *modeldef, u32 vma, uintptr_t
 	for (i = 0; i < modeldef->numparts; i++) {
 		PROMOTE(modeldef->parts[i]);
 	}
-
+	
 	modelPromoteNodeOffsetsToPointers(modeldef->rootnode, vma, fileramaddr);
 
 	// Sort parts by part number so they can be bisected during lookup
@@ -4082,6 +4102,8 @@ void modelInitRwData(struct model *model, struct modelnode *startnode)
 	union modelrodata *rodata;
 	union modelrwdata *rwdata;
 
+	debugPrint(PC_DBG_FLAG_MODEL, "modelnode ptr: %llx type: %x\n", node, node->type);
+
 	while (node) {
 		u32 type = node->type & 0xff;
 
@@ -4184,6 +4206,8 @@ void modelInitRwData(struct model *model, struct modelnode *startnode)
 void modelInit(struct model *model, struct modeldef *modeldef, union modelrwdata **rwdatas, bool resetanim)
 {
 	struct modelnode *node;
+
+	debugPrint(PC_DBG_FLAG_MODEL, "model init\n");
 
 	model->unk00 = 0;
 	model->definition = modeldef;
@@ -4402,3 +4426,17 @@ void modelNodeReplaceGdl(struct modeldef *modeldef, struct modelnode *node, Gfx 
 		break;
 	}
 }
+
+// Notes PC: write C impl of model00018680 based on the ASM code
+bool model00018680(struct modelrenderdata *renderdata, struct model *model)
+{
+	//print("[ERROR] model00018680 unimplemented.\n");
+
+	/*
+		TODO reverse model00018680
+		Note, running without executing this function on N64 and returning false still displays
+		the first scene correctly, we can disable the function until we reverse it
+	*/
+	return false;
+}
+

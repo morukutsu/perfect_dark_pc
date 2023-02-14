@@ -64,6 +64,7 @@ void argSetString(char *string)
 
 bool argsParseDebugArgs(void)
 {
+#if 0
 	u32 devaddr;
 	u32 stack;
 	s32 i;
@@ -99,6 +100,8 @@ bool argsParseDebugArgs(void)
 #endif
 
 	return ret;
+#endif
+	return false;
 }
 
 /**

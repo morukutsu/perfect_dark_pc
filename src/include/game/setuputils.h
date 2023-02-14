@@ -5,6 +5,7 @@
 #include "types.h"
 
 u32 setupGetCmdLength(u32 *cmd);
+u32 setupGetCmdLengthLoad(u32 *cmd);
 u32 *setupGetCmdByIndex(s32 cmdindex);
 s32 setupGetCmdIndexByTag(struct tag *tag);
 u32 setupGetCmdIndexByProp(struct prop *prop);

@@ -45,6 +45,7 @@ u8 *g_StackAllocatedPos = (u8 *) K0BASE + 4 * 1024 * 1024;
 u32 var8005ce4c = 0x00000002;
 u32 var8005ce50 = 0x10000000;
 
+#if 0
 extern u8 *_libSegmentStart;
 extern u8 *_datazipSegmentRomStart;
 extern u8 *_datazipSegmentRomEnd;
@@ -52,6 +53,7 @@ extern u8 *_dataSegmentStart;
 extern u8 *_inflateSegmentStart;
 extern u8 *_inflateSegmentRomStart;
 extern u8 *_inflateSegmentRomEnd;
+#endif
 
 #if VERSION >= VERSION_NTSC_1_0
 s32 bootGetMemSize(void)
@@ -74,6 +76,7 @@ u32 __osSetFpcCsr(u32 arg0);
  */
 void bootPhase1(void)
 {
+#if 0
 	s32 datacomplen;
 	s32 inflatelen;
 	u8 *dataziprom;
@@ -170,6 +173,7 @@ void bootPhase1(void)
 	// Create and start the main thread
 	osCreateThread(&g_MainThread, THREAD_MAIN, bootPhase2, NULL, bootAllocateStack(THREAD_MAIN, STACKSIZE_MAIN), THREADPRI_MAIN);
 	osStartThread(&g_MainThread);
+#endif
 }
 
 /**
@@ -189,6 +193,7 @@ void bootPhase1(void)
  */
 void *bootAllocateStack(s32 threadid, s32 size)
 {
+#if 0
 	u8 *ptr8;
 	u32 *ptr32;
 	s32 i;
@@ -218,6 +223,7 @@ void *bootAllocateStack(s32 threadid, s32 size)
 #endif
 
 	return g_StackAllocatedPos + size - 8;
+#endif
 }
 
 #if VERSION < VERSION_NTSC_1_0

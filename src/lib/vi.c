@@ -226,7 +226,11 @@ void viReset(s32 stagenum)
 
 	ptr = mempAlloc(fbsize * 2 + 0x40, MEMPOOL_STAGE);
 
-	ptr = (u8 *)(((uintptr_t) ptr + 0x3f) & 0xffffffc0);
+	//ptr = (u8 *)(((uintptr_t) ptr + 0x3f) & 0xffffffc0);
+
+	// Notes PC: aligns up the pointer
+	// on N64 they were 32 bit pointers but now they are 64 bit
+	ptr = (u8 *)(((u64) ptr + 0x3f) & 0xfffffffffffffc0);
 
 	g_FrameBuffers[0] = (u16 *) ptr;
 	g_FrameBuffers[1] = (u16 *) (fbsize + ptr);
@@ -254,12 +258,15 @@ void viReset(s32 stagenum)
  */
 void viBlack(bool black)
 {
+#if 0
 	black += 2;
 	g_ViUnblackTimer = black;
+#endif
 }
 
 void vi00009ed4(void)
 {
+#if 0
 	s32 prevmask;
 	s32 offset;
 	s32 reg;
@@ -294,6 +301,7 @@ void vi00009ed4(void)
 	osViSetXScale(g_ViXScalesBySlot[1 - var8005ce74]);
 	osViSetYScale(g_ViYScalesBySlot[1 - var8005ce74]);
 	osViSetSpecialFeatures(OS_VI_GAMMA_OFF | OS_VI_DITHER_FILTER_ON);
+#endif
 }
 
 #if MATCHING && !PAL
@@ -1307,7 +1315,9 @@ Gfx *vi0000ad5c(Gfx *gdl, Vp *vp)
 	guPerspectiveF(var80092830.m, &g_ViPerspScale, g_ViBackData->fovy, g_ViBackData->aspect, g_ViBackData->znear, g_ViBackData->zfar, 1);
 	guMtxF2L(var80092830.m, var80092870);
 
-	gSPMatrix(gdl++, OS_K0_TO_PHYSICAL(var80092870), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+	//gSPMatrix(gdl++, OS_K0_TO_PHYSICAL(var80092870), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+	gSPMatrix(gdl++, var80092870, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+
 	gSPPerspNormalize(gdl++, g_ViPerspScale);
 
 	camSetPerspectiveMtxL(var80092870);
@@ -1392,7 +1402,6 @@ Gfx *viFillBuffer(Gfx *gdl)
 	gDPSetCycleType(gdl++, G_CYC_FILL);
 	gDPFillRectangle(gdl++, 0, 0, g_ViBackData->bufx - 1, g_ViBackData->bufy - 1);
 	gDPPipeSync(gdl++);
-
 	return gdl;
 }
 
@@ -1484,7 +1493,6 @@ Gfx *viRenderViewportEdges(Gfx *gdl)
 			}
 		}
 	}
-
 	return gdl;
 }
 

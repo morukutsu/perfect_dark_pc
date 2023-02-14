@@ -29,6 +29,7 @@ void frametimeApply(s32 diffframe60, s32 diffframe240, s32 frametime)
 
 void frametimeCalculate(void)
 {
+#if 0
 	u32 count;
 	u32 diffframet;
 	u32 diffframe60;
@@ -49,6 +50,11 @@ void frametimeCalculate(void)
 	g_Vars.mininc60 = 1;
 
 	frametimeApply(diffframe60, diffframe240, count);
+#endif
+	// Note PC: this is blocking on PC at the moment because of missing stubs
+	// TODO FIX
+	//frametimeApply(CYCLES_PER_FRAME, CYCLES_PER_FRAME * 4, 0);
+	frametimeApply(1, 1, 0);
 }
 
 void func0f16cf8c(s32 arg0)

@@ -218,6 +218,7 @@ void musicQueueFadeEvent(s32 tracktype, f32 arg1, bool keepafterfade)
 
 void musicReset(void)
 {
+#if PC_PORT_AUDIO_ENABLED
 	s32 i;
 
 	if (!g_SndDisabled) {
@@ -242,6 +243,7 @@ void musicReset(void)
 		g_TemporaryAmbientTrack = -1;
 		g_MusicNrgIsActive = false;
 	}
+#endif
 }
 
 void musicQueueStopAllEvent(void)
@@ -416,12 +418,14 @@ void musicSetStage(s32 stagenum)
 
 void musicStop(void)
 {
+#if PC_PORT_AUDIO_ENABLED
 #if VERSION >= VERSION_NTSC_1_0
 	musicSaveInterval();
 	musicQueueStopAllEvent();
 	musicRestoreInterval();
 #else
 	musicQueueStopAllEvent();
+#endif
 #endif
 }
 

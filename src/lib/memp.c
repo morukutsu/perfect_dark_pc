@@ -7,6 +7,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "native_functions.h"
+
 /**
  * memp - memory pool allocation system.
  *
@@ -54,9 +56,21 @@ struct memorypool {
 struct memorypool g_MempOnboardPools[9];
 struct memorypool g_MempExpansionPools[9];
 
+u8* pcMempHeap = NULL;
+size_t pcMempHeapSize = 32 * 1024 * 1024;
+
 void mempInit(void)
 {
-	// empty
+	// Notes: On PC: ignore heapstart, heaplen, just allocate a big buffer and allocate from there
+	pcMempHeap = (u8*)nativeMalloc(pcMempHeapSize);
+}
+
+void mempFinalize()
+{
+	if (pcMempHeap != NULL)
+	{
+		nativeFree(pcMempHeap);
+	}
 }
 
 /**
@@ -69,6 +83,15 @@ void mempSetHeap(u8 *heapstart, u32 heaplen)
 {
 	s32 i;
 	u8 *extraend;
+	u32 onboardHeaplen = 4 * 1024 * 1024;
+
+	/*
+		Notes PC
+			- Allocate a 32MB buffer to store everything
+			- Allocate 4MB for the onboard pool
+			- Then the rest for the extension pool
+	*/
+	heapstart = pcMempHeap;
 
 	for (i = 0; i < 9; i++) {
 		g_MempOnboardPools[i].start = 0;
@@ -83,28 +106,14 @@ void mempSetHeap(u8 *heapstart, u32 heaplen)
 	}
 
 	g_MempOnboardPools[MEMPOOL_0].start = heapstart;
-	g_MempOnboardPools[MEMPOOL_0].rightpos = heapstart + heaplen;
+	g_MempOnboardPools[MEMPOOL_0].rightpos = heapstart + onboardHeaplen;
 	g_MempOnboardPools[MEMPOOL_PERMANENT].start = heapstart;
-	g_MempOnboardPools[MEMPOOL_PERMANENT].rightpos = heapstart + heaplen;
+	g_MempOnboardPools[MEMPOOL_PERMANENT].rightpos = heapstart + onboardHeaplen;
 	g_MempOnboardPools[MEMPOOL_STAGE].start = heapstart;
-	g_MempOnboardPools[MEMPOOL_STAGE].rightpos = heapstart + heaplen;
+	g_MempOnboardPools[MEMPOOL_STAGE].rightpos = heapstart + onboardHeaplen;
 
-	// If 8MB, reserve the entire expansion pak for the stage pool
-#if VERSION >= VERSION_NTSC_1_0
-	extraend = (u8 *) K0BASE + bootGetMemSize();
-#else
-	extraend = (u8 *) K0BASE + osGetMemSize();
-#endif
-
-#if VERSION >= VERSION_NTSC_1_0
-	if (bootGetMemSize() > 4 * 1024 * 1024)
-#else
-	if (osGetMemSize() > 4 * 1024 * 1024)
-#endif
-	{
-		g_MempExpansionPools[MEMPOOL_STAGE].start = (u8 *) K0BASE + 4 * 1024 * 1024;
-		g_MempExpansionPools[MEMPOOL_STAGE].rightpos = extraend;
-	}
+	g_MempExpansionPools[MEMPOOL_STAGE].start = heapstart + onboardHeaplen;
+	g_MempExpansionPools[MEMPOOL_STAGE].rightpos = heapstart + pcMempHeapSize;
 
 	for (i = 0; i < 9; i++) {
 		g_MempOnboardPools[i].end = g_MempOnboardPools[i].rightpos;
@@ -120,15 +129,19 @@ void mempSetHeap(u8 *heapstart, u32 heaplen)
  */
 u32 mempGetStageFree(void)
 {
-	u32 free;
+	u32 freeSpace;
 
 	if (IS4MB()) {
-		free = g_MempOnboardPools[MEMPOOL_STAGE].rightpos - g_MempOnboardPools[MEMPOOL_STAGE].leftpos;
-	} else {
-		free = g_MempExpansionPools[MEMPOOL_STAGE].rightpos - g_MempExpansionPools[MEMPOOL_STAGE].leftpos;
+		freeSpace = g_MempOnboardPools[MEMPOOL_STAGE].rightpos - g_MempOnboardPools[MEMPOOL_STAGE].leftpos;
+	} 
+	else
+	{
+		// Notes PC: comparing 2 64bits pointers, can overflow the u32
+		// TODO: Verify this
+		freeSpace = g_MempExpansionPools[MEMPOOL_STAGE].rightpos - g_MempExpansionPools[MEMPOOL_STAGE].leftpos;
 	}
 
-	return free;
+	return freeSpace;
 }
 
 void *mempGetNextStageAllocation(void)
@@ -137,7 +150,9 @@ void *mempGetNextStageAllocation(void)
 
 	if (IS4MB()) {
 		next = g_MempOnboardPools[MEMPOOL_STAGE].leftpos;
-	} else {
+	} 
+	else
+	{
 		next = g_MempExpansionPools[MEMPOOL_STAGE].leftpos;
 	}
 
@@ -239,7 +254,8 @@ s32 mempRealloc(void *allocation, s32 newsize, u8 poolnum)
 
 	if (growsize <= 0) {
 		pool->leftpos += growsize;
-		pool->leftpos = (u8 *)ALIGN16((uintptr_t) pool->leftpos);
+
+		pool->leftpos = (u8 *)ALIGN16((uintptr_t)pool->leftpos);
 		return 1;
 	}
 

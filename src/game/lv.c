@@ -97,6 +97,8 @@
 #include "lib/vi.h"
 #include "types.h"
 
+#include "print.h"
+
 struct sndstate *g_MiscSfxAudioHandles[3];
 u32 var800aa5bc;
 s32 g_MiscSfxActiveTypes[3];
@@ -235,6 +237,8 @@ void lvUpdateMiscSfx(void)
 
 void lvReset(s32 stagenum)
 {
+	print("lvreset: %d\n", stagenum);
+	
 	lvFadeReset();
 
 	var80084014 = false;
@@ -991,6 +995,7 @@ Gfx *lvRender(Gfx *gdl)
 
 	if (g_Vars.stagenum == STAGE_TITLE
 			|| (g_Vars.stagenum == STAGE_TEST_OLD && titleIsKeepingMode())) {
+
 		gSPDisplayList(gdl++, &var800613a0);
 
 		if (debugIsZBufferDisabled()) {

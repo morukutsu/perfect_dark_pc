@@ -3857,7 +3857,7 @@ void bgunTickGunLoad(void)
 
 			if (modeldef->texconfigs[i].texturenum < NUM_TEXTURES) {
 				osSyncPrintf("BriGun:  Uncompress %d of %d\n", i, modeldef->numtexconfigs);
-				texLoad(&modeldef->texconfigs[i].texturenum, &player->gunctrl.unk15c0, true);
+				texLoad(&modeldef->texconfigs[i].texturenum, &player->gunctrl.unk15c0, true, NULL);
 				modeldef->texconfigs[i].unk0b = 1;
 			}
 

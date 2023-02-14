@@ -11,6 +11,12 @@
 #include "data.h"
 #include "types.h"
 
+#include "rom.h"
+#include "print.h"
+#include "byteswap.h"
+
+#include "native_functions.h"
+
 /**
  * This file contains functions relating to ROM asset files.
  *
@@ -49,6 +55,7 @@
  * functions that support this theory.
  */
 
+#if 0
 extern void *_file_bg_sev_seg;
 extern void *_file_bg_silo_seg;
 extern void *_file_bg_stat_seg;
@@ -2070,12 +2077,16 @@ extern void *_file_PjappdZ;
 #endif
 extern void *_filenamesSegmentRomStart;
 
+#endif
+
 struct fileinfo g_FileInfo[NUM_FILES];
 
 #if VERSION >= VERSION_NTSC_1_0
 u32 var800aa570;
 #endif
 
+
+#if 0
 u32 g_FileTable[] = {
 	/*0x0000*/ 0,
 	/*0x0001*/ (uintptr_t) &_file_bg_sev_seg,
@@ -4099,6 +4110,9 @@ u32 g_FileTable[] = {
 #endif
 	(uintptr_t) &_filenamesSegmentRomStart,
 };
+#endif
+
+u32 g_FileTable[NUM_FILES];
 
 romptr_t fileGetRomAddress(s32 filenum)
 {
@@ -4140,7 +4154,8 @@ void fileLoad(u8 *dst, u32 allocationlen, u32 *romaddrptr, struct fileinfo *info
 		// DMA the compressed data to scratch space then inflate
 		u8 *scratch = (dst + allocationlen) - ((romsize + 7) & 0xfffffff8);
 
-		if ((uintptr_t)scratch - (uintptr_t)dst < 8) {
+		//if ((uintptr_t)scratch - (uintptr_t)dst < 8) {
+		if (scratch - dst < 8) {
 			info->loadedsize = 0;
 		} else {
 			s32 result;
@@ -4169,10 +4184,95 @@ void fileLoad(u8 *dst, u32 allocationlen, u32 *romaddrptr, struct fileinfo *info
 	}
 }
 
+/*
+    vals = {
+        #                   ntsc-beta  ntsc-1.0   ntsc-final pal-beta   pal-final  jpn-final
+        'files':           [0x29160,   0x28080,   0x28080,   0x29b90,   0x28910,   0x28800,   ],
+        'data':            [0x30850,   0x39850,   0x39850,   0x39850,   0x39850,   0x39850,   ],
+        'game':            [0x43c40,   0x4fc40,   0x4fc40,   0x4fc40,   0x4fc40,   0x4fc40,   ],
+        'jpnfontsingle':   [0x148c40,  0x194b20,  0x194b20,  0x180330,  0x180330,  0,         ],
+        'jpnfontmulti':    [0x154340,  0x19fb40,  0x19fb40,  0x18b340,  0x18b340,  0,         ],
+        'jpnfontcombined': [0,         0,         0,         0,         0,         0x179330,  ],
+        'animations':      [0x155dc0,  0x1a15c0,  0x1a15c0,  0x18cdc0,  0x18cdc0,  0x190c50,  ],
+        'mpconfigs':       [0x785130,  0x7d0a40,  0x7d0a40,  0x7bc240,  0x7bc240,  0x7c00d0,  ],
+        'firingrange':     [0x79e410,  0x7e9d20,  0x7e9d20,  0x7d5520,  0x7d5520,  0x7d93b0,  ],
+        'textureconfig':   [0x79f960,  0x7eb270,  0x7eb270,  0x7d6a70,  0x7d6a70,  0x7da900,  ],
+        'font0':           [0x7a6a80,  0x7f2390,  0x7f2390,  0x7ddb90,  0x7ddb90,  0x7e1a20,  ],
+        'font1':           [0x7a9020,  0x7f4930,  0x7f4930,  0x7e0130,  0x7e0130,  0x7e3fc0,  ],
+        'font2':           [0x7abf50,  0x7f7860,  0x7f7860,  0x7e3060,  0x7e3060,  0x7e6ef0,  ],
+        'font3':           [0x7ad210,  0x7f8b20,  0x7f8b20,  0x7e4320,  0x7e4320,  0x7e81b0,  ],
+        'font4':           [0x7ae420,  0x7f9d30,  0x7f9d30,  0x7e5530,  0x7e5530,  0x7e93c0,  ],
+        'font5':           [0x7b06a0,  0x7fbfb0,  0x7fbfb0,  0x7e87b0,  0x7e87b0,  0x7ec640,  ],
+        'font6':           [0x7b2470,  0x7fdd80,  0x7fdd80,  0x7eae20,  0x7eae20,  0x7eecb0,  ],
+        'font7':           [0x7b4fd0,  0x8008e0,  0x8008e0,  0x7eee70,  0x7eee70,  0x7f2d00,  ],
+        'font8':           [0x7b8490,  0x803da0,  0x803da0,  0x7f2330,  0x7f2330,  0x7f61c0,  ],
+        'font9':           [0x7bb1b0,  0x806ac0,  0x806ac0,  0x7f5050,  0x7f5050,  0x7f8ee0,  ],
+        'sfxctl':          [0x7be940,  0x80a250,  0x80a250,  0x7f87e0,  0x7f87e0,  0x7fc670,  ],
+        'textures':        [0x1d12fe0, 0x1d65f40, 0x1d65f40, 0x1d5bb50, 0x1d5ca20, 0x1d61f90, ],
+        'copyright':       [0x1fabac0, 0x1ffea20, 0x1ffea20, 0x1ff4630, 0x1ff5500, 0x1ffd6b0, ],
+    }
+*/
+
 void filesInit(void)
 {
 	s32 i;
 	s32 j = 0;
+
+	/*
+		On PC: inspect the ROM and fill the g_FileTable by iterating on files
+		For now, assume the ROM is ntsc-final
+	*/
+	u32 start = 0x28080;
+	u32 dataStart = 0x39850;
+
+	u8 buf[4];
+	u32 addr;
+	u32 filesCount = 0;
+
+	u8* dataZipped;
+	u8* dataUnzipped;
+
+	u32 length;
+
+	debugPrint(PC_DBG_FLAG_FILE, "filesInit(): loading files table from ROM\n");
+
+	// Extract data segment
+	dataZipped = nativeMalloc(1 * 1024 * 1024);
+	dataUnzipped = nativeMalloc(1 * 1024 * 1024);
+
+	romCopy(dataZipped, dataStart, 1 * 1024 * 1024);
+
+	// Unzip data segment
+	length = rzipInflate(dataZipped, dataUnzipped, 0);
+	debugPrint(PC_DBG_FLAG_FILE, "inflated data %d bytes\n", length);
+
+	// Find files in uncompressed data segment
+	for (i = 0; i <= NUM_FILES; i++) {
+
+		//printf("i: %d - filesCount: %d\n", i, filesCount);
+
+		buf[0] = dataUnzipped[start];
+		buf[1] = dataUnzipped[start + 1];
+		buf[2] = dataUnzipped[start + 2];
+		buf[3] = dataUnzipped[start + 3];
+
+		addr = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
+		g_FileTable[i] = (addr);
+
+		start += 4;
+
+		if ((addr == 0 && filesCount != 0) || i == NUM_FILES) {
+			debugPrint(PC_DBG_FLAG_FILE, "loaded %d files\n", filesCount);
+			break;
+		}
+
+		filesCount++;
+	}
+
+	nativeFree(dataZipped);
+	nativeFree(dataUnzipped);
+
+	// ----- End of PC specific code
 
 	for (i = 1, j = 0; i < NUM_FILES; i++) {
 		struct fileinfo *info = g_FileInfo + i;
@@ -4242,6 +4342,8 @@ u32 fileGetInflatedSize(s32 filenum)
 
 void *fileLoadToNew(s32 filenum, u32 method)
 {
+	debugPrint(PC_DBG_FLAG_FILE, "fileLoadToNew %x method %x\n", filenum, method);
+
 	struct fileinfo *info = &g_FileInfo[filenum];
 	u32 stack;
 	void *ptr;
@@ -4266,6 +4368,8 @@ void *fileLoadToNew(s32 filenum, u32 method)
 		while (1);
 	}
 
+	debugPrint(PC_DBG_FLAG_FILE, "- loadedsize: %x bytes\n", info->loadedsize);
+
 	return ptr;
 }
 
@@ -4276,6 +4380,8 @@ void fileRemove(s32 filenum)
 
 void *fileLoadToAddr(s32 filenum, s32 method, u8 *ptr, u32 size)
 {
+	debugPrint(PC_DBG_FLAG_FILE, "fileLoadToAddr %x method %x\n", filenum, method);
+
 	struct fileinfo *info = &g_FileInfo[filenum];
 
 	if (method == FILELOADMETHOD_EXTRAMEM || method == FILELOADMETHOD_DEFAULT) {
@@ -4306,6 +4412,13 @@ void fileSetSize(s32 filenum, void *ptr, u32 size, bool reallocate)
 	if (reallocate) {
 		mempRealloc(ptr, g_FileInfo[filenum].loadedsize, MEMPOOL_STAGE);
 	}
+}
+
+// Note PC: we need to increase the loaded size because sometimes the PC converted file is larger than the original
+// However this method will need more testing to make sure it works in all cases
+void fileSetLoadedsize(s32 filenum, u32 size)
+{
+	g_FileInfo[filenum].loadedsize = size;
 }
 
 void filesStop(u8 arg0)

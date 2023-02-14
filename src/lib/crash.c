@@ -354,6 +354,7 @@ u32 crashGetParentStackFrame(u32 *origptr, u32 *minaddr, u32 origsp, u32 *regs)
 
 bool crashIsReturnAddress(u32 *instruction)
 {
+#if 0
 	if (((uintptr_t)instruction % 4) == 0
 			&& (uintptr_t)instruction >= (uintptr_t)tlbInit
 			&& (uintptr_t)instruction <= (uintptr_t)&_libSegmentEnd) {
@@ -367,7 +368,7 @@ bool crashIsReturnAddress(u32 *instruction)
 			return true;
 		}
 	}
-
+#endif
 	return false;
 }
 
@@ -505,6 +506,7 @@ u32 crash0000c7c0nb(void)
 
 u32 crashGetStackEnd(u32 sp, s32 tid)
 {
+#if 0
 	u32 start;
 	u32 end;
 
@@ -521,10 +523,13 @@ u32 crashGetStackEnd(u32 sp, s32 tid)
 	}
 
 	return (sp & 0xf0000000) | (end - start);
+#endif
+	return 0;
 }
 
 u32 crashGetStackStart(u32 sp, s32 tid)
 {
+#if 0
 	u32 start;
 
 	if (tid <= 0 || tid > 6U) {
@@ -539,6 +544,7 @@ u32 crashGetStackStart(u32 sp, s32 tid)
 	}
 
 	return sp & 0xf0000000;
+#endif
 }
 
 bool crashIsDouble(f32 value)
@@ -583,6 +589,7 @@ void crashPrint3Floats(s32 index, f32 value1, f32 value2, f32 value3)
 
 u32 crashGenerate(OSThread *thread, u32 *callstack, s32 *tracelen)
 {
+#if 0
 	s32 i;
 	u32 ptr;
 	u32 *sp;
@@ -755,6 +762,8 @@ u32 crashGenerate(OSThread *thread, u32 *callstack, s32 *tracelen)
 	rmonPrintf("\n");
 	rmonPrintf("\n");
 
+	return 0;
+#endif
 	return 0;
 }
 

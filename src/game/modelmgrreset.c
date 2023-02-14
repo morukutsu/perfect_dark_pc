@@ -23,6 +23,7 @@
 #include "lib/anim.h"
 #include "data.h"
 #include "types.h"
+#include <assert.h>
 
 #define NUMTYPE1() (IS4MB() ? 0 : 35)
 #define NUMTYPE2() (IS4MB() ? 24 : 25)
@@ -99,19 +100,21 @@ void modelmgrAllocateSlots(s32 numobjs, s32 numchrs)
 
 	ptr = mempAlloc(totalsize, MEMPOOL_STAGE);
 
+	// NOTE on PC modelrwdatabinding is larger: 16 bytes instead of 8 (pointers are 64 bits)
 	if (NUMTYPE1()) {
 		g_ModelRwdataBindings[0] = (struct modelrwdatabinding *) ptr;
-		ptr += NUMTYPE1() * 8;
+		//ptr += NUMTYPE1() * 8;
+		ptr += NUMTYPE1() * sizeof(struct modelrwdatabinding);
 	}
 
 	if (NUMTYPE2()) {
 		g_ModelRwdataBindings[1] = (struct modelrwdatabinding *) ptr;
-		ptr += NUMTYPE2() * 8;
+		ptr += NUMTYPE2() * sizeof(struct modelrwdatabinding);
 	}
 
 	if (NUMTYPE3()) {
 		g_ModelRwdataBindings[2] = (struct modelrwdatabinding *) ptr;
-		ptr += NUMTYPE3() * 8;
+		ptr += NUMTYPE3() * sizeof(struct modelrwdatabinding);
 	}
 
 	g_ModelSlots = (struct model *) ptr;
@@ -159,6 +162,8 @@ void modelmgrAllocateSlots(s32 numobjs, s32 numchrs)
 bool modelmgrLoadProjectileModeldefs(s32 weaponnum)
 {
 	bool result = false;
+
+	assert(weaponnum >= 0 && weaponnum <= WEAPON_SUICIDEPILL);
 	struct weapon *weapon = g_Weapons[weaponnum];
 	s32 i;
 

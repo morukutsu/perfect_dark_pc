@@ -139,6 +139,7 @@ void schedInitCrashLastRendered(void)
 
 void osCreateScheduler(OSSched *sc, OSThread *thread, u8 mode, u32 numFields)
 {
+#if 0
 	sc->curRSPTask = 0;
 	sc->curRDPTask = 0;
 	sc->clientList = 0;
@@ -175,6 +176,7 @@ void osCreateScheduler(OSSched *sc, OSThread *thread, u8 mode, u32 numFields)
 	schedInitCrashLastRendered();
 	osCreateThread(sc->thread, THREAD_SCHED, &__scMain, sc, bootAllocateStack(THREAD_SCHED, STACKSIZE_SCHED), THREADPRI_SCHED);
 	osStartThread(sc->thread);
+#endif
 }
 
 void osScAddClient(OSSched *sc, OSScClient *c, OSMesgQueue *msgQ, int is8mb)
@@ -241,7 +243,7 @@ void __scMain(void *arg)
 	while (!done) {
 		osRecvMesg(&sc->interruptQ, (OSMesg *)&msg, OS_MESG_BLOCK);
 
-		switch ((int) msg) {
+		switch ((u64) msg) {
 		case VIDEO_MSG:
 			if (osViGetCurrentFramebuffer() == osViGetNextFramebuffer()) {
 				osDpSetStatus(DPC_STATUS_FLUSH);

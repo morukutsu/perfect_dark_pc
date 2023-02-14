@@ -10,6 +10,9 @@
 #include "data.h"
 #include "types.h"
 
+#include <assert.h>
+#include "print.h"
+
 bool (*g_CommandPointers[])(void) = {
 	/*0x0000*/ aiGoToNext,
 	/*0x0001*/ aiGoToFirst,
@@ -788,6 +791,7 @@ void chraiExecute(void *entity, s32 proptype)
 				// type is invalid by passing over them and continuing
 				// execution. This would very likely result in a crash though.
 				g_Vars.aioffset += chraiGetCommandLength(g_Vars.ailist, g_Vars.aioffset);
+				assert(false);
 			}
 		}
 	}

@@ -10,6 +10,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+
 s32 texGetMask(s32 value)
 {
 	if (value < 2) {
@@ -282,13 +284,23 @@ void texSelect(Gfx **gdlptr, struct textureconfig *tconfig, u32 arg2, s32 arg3, 
 
 		tex = NULL;
 
+		//print("ptr %x width: %d height: %d\n", tconfig->texturenum, tconfig->width, tconfig->height);
+
+		// Note: added for PC
+		texturenum = (u16)tconfig->texturenum;
+
 		if ((u32)tconfig->texturenum < NUM_TEXTURES) {
 			texLoadFromConfigs(tconfig, 1, pool, 0);
 		}
 
 		if (tconfig->unk0b == 1) {
-			ptr = (u16 *)tconfig->textureptr;
+			// Note PC
+			// Is this really necessary, or can we just pass down a saved texture num?
+
+			/*
+			ptr = (u16 *)tconfig->texturenum;
 			texturenum = ((u16 *)PHYS_TO_K0(ptr))[-4];
+			*/
 
 			// GCC has problems with this area because it seems to think that
 			// registers are 64 bits wide. To do the index < g_TexNumConfigs
@@ -302,7 +314,8 @@ void texSelect(Gfx **gdlptr, struct textureconfig *tconfig, u32 arg2, s32 arg3, 
 #ifdef __sgi
 			index = tconfig - g_TexWallhitConfigs;
 #else
-			index = ((s32) tconfig - (s32) g_TexWallhitConfigs) / sizeof(struct textureconfig);
+			//index = ((s32) tconfig - (s32) g_TexWallhitConfigs) / sizeof(struct textureconfig);
+			index = ((uintptr_t) tconfig - (uintptr_t) g_TexWallhitConfigs) / sizeof(struct textureconfig);
 #endif
 
 			if (index >= 0 && index < g_TexNumConfigs) {

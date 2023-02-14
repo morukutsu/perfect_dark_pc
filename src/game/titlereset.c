@@ -21,7 +21,8 @@ void titleReset(void)
 		g_TitleNextMode = TITLEMODE_SKIP;
 	}
 
-	var8009cca0 = mempAlloc(0x47800, MEMPOOL_STAGE);
+	//var8009cca0 = mempAlloc(0x47800, MEMPOOL_STAGE);
+	var8009cca0 = mempAlloc(0x50000, MEMPOOL_STAGE);
 
 	getitleReset();
 }

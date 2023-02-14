@@ -174,6 +174,7 @@ extern u32 *g_VmZipTable;
  */
 void vmInit(void)
 {
+#if 0
 	s32 s1;
 	u32 *romaddrs;
 	u32 numpages;
@@ -206,11 +207,19 @@ void vmInit(void)
 
 	rzipInit();
 
+/*
 #if VERSION >= VERSION_NTSC_1_0
 	if (bootGetMemSize() <= 0x400000)
 #else
 	if (osGetMemSize() <= 0x400000)
 #endif
+*/
+
+/* 
+	Notes PC: force > 4MB mode on PC
+	Since all code is compiled and loaded on PC, I think we can skip all this code
+*/
+	if (0)
 	{
 		g_Is4Mb = true;
 
@@ -354,4 +363,5 @@ void vmInit(void)
 	g_VmNumPageReplaces = 0;
 
 	osInvalICache(0, ICACHE_SIZE);
+#endif
 }

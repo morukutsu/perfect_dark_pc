@@ -886,6 +886,7 @@ glabel musicTickEvents
 // The code below uses += 0 to get the mismatch down to one instruction,
 void musicTickEvents(void)
 {
+#if PC_PORT_AUDIO_ENABLED
 	s32 i;
 	s32 j;
 	s32 result;
@@ -1044,11 +1045,13 @@ void musicTickEvents(void)
 			g_MusicSleepRemaining240 = 0;
 		}
 	}
+#endif
 }
 #endif
 
 void musicTick(void)
 {
+#if PC_PORT_AUDIO_ENABLED
 	s32 i;
 	bool playnrg = false;
 
@@ -1162,6 +1165,7 @@ void musicTick(void)
 
 		musicTickEvents();
 	}
+#endif
 }
 
 bool musicIsTrackTypePlaying(s32 tracktype)

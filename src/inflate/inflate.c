@@ -4,6 +4,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "print.h"
+
 #define GETBYTE()   (inbuf[inptr++])
 #define NEXTBYTE()  (u8)GETBYTE()
 #define NEEDBITS(n) {while(k<(n)){b|=((u32)NEXTBYTE())<<k;k+=8;}}
@@ -629,4 +631,9 @@ u32 inflate1173(void *src, void *dst, struct huft *hlist)
 	inflate();
 
 	return wp;
+}
+
+u32 getInflate1173Offset()
+{
+	return inptr;
 }

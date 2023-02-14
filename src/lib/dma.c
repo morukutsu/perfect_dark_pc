@@ -5,6 +5,9 @@
 #include "lib/dma.h"
 #include "data.h"
 #include "types.h"
+#include "rom.h"
+
+#define PC_PORT_DMA_DISABLED
 
 volatile u32 g_DmaNumSlotsBusy;
 u32 var80094ae4;
@@ -17,6 +20,7 @@ u8 g_LoadType = 0;
 
 void dmaInit(void)
 {
+#ifndef PC_PORT_DMA_DISABLED
 	s32 i;
 
 	for (i = 0; i < ARRAYCOUNT(g_DmaSlotsBusy); i++) {
@@ -26,10 +30,12 @@ void dmaInit(void)
 	g_DmaNumSlotsBusy = 0;
 
 	osCreateMesgQueue(&g_DmaMesgQueue, g_DmaMesgs, ARRAYCOUNT(g_DmaMesgs));
+#endif
 }
 
 void dmaStart(void *memaddr, u32 romaddr, u32 len, bool priority)
 {
+#ifndef PC_PORT_DMA_DISABLED
 	u32 numiterations;
 	u32 remainder;
 	s32 i;
@@ -73,6 +79,7 @@ void dmaStart(void *memaddr, u32 romaddr, u32 len, bool priority)
 
 		osPiStartDma(&g_DmaIoMsgs[i], priority, 0, romaddr, memaddr, remainder, &g_DmaMesgQueue);
 	}
+#endif
 }
 
 #if VERSION >= VERSION_NTSC_1_0
@@ -93,6 +100,7 @@ u32 xorDeadbabe(u32 value)
  */
 void dmaCheckPiracy(void *memaddr, u32 len)
 {
+#if 0
 	if (g_LoadType != LOADTYPE_NONE && len > 128) {
 #if PIRACYCHECKS
 		u32 value = xorDeadbeef((PAL ? 0x0109082b : 0x0330c820) ^ 0xdeadbeef);
@@ -116,11 +124,13 @@ void dmaCheckPiracy(void *memaddr, u32 len)
 
 		g_LoadType = LOADTYPE_NONE;
 	}
+#endif
 }
 #endif
 
 void dmaWait(void)
 {
+#if 0
 	u32 stack;
 	OSIoMesg *msg;
 	s32 i;
@@ -137,24 +147,31 @@ void dmaWait(void)
 		g_DmaSlotsBusy[i] = false;
 		g_DmaNumSlotsBusy--;
 	}
+#endif
 }
 
 void dmaExec(void *memaddr, u32 romaddr, u32 len)
 {
+#if 0
 	dmaStart(memaddr, romaddr, len, false);
 	dmaWait();
 #if VERSION >= VERSION_NTSC_1_0
 	dmaCheckPiracy(memaddr, len);
 #endif
+#endif
+	romCopy(memaddr, romaddr, len);
 }
 
 void dmaExecHighPriority(void *memaddr, u32 romaddr, u32 len)
 {
+#if 0
 	dmaStart(memaddr, romaddr, len, true);
 	dmaWait();
 #if VERSION >= VERSION_NTSC_1_0
 	dmaCheckPiracy(memaddr, len);
 #endif
+#endif
+	romCopy(memaddr, romaddr, len);
 }
 
 /**
@@ -175,7 +192,7 @@ void dmaExecHighPriority(void *memaddr, u32 romaddr, u32 len)
 void *dmaExecWithAutoAlign(void *memaddr, u32 romaddr, u32 len)
 {
 	u32 alignedrom = ALIGN2(romaddr);
-	u32 alignedmem = ALIGN16((uintptr_t) memaddr);
+	u64 alignedmem = ALIGN16((uintptr_t) memaddr);
 	u32 offset = romaddr - alignedrom; // 0 or 1
 	u32 alignedlen = ALIGN16(offset + len);
 

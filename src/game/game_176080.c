@@ -68,7 +68,7 @@ void mblur0f176298(void)
 Gfx *mblur0f1762ac(Gfx *gdl)
 {
 	u32 subamount;
-	u32 addr;
+	u64 addr;
 
 	if (g_Vars.normmplayerisrunning
 			&& (g_Vars.currentplayernum >= 2 || (PLAYERCOUNT() == 2 && g_Vars.currentplayernum == 1))) {

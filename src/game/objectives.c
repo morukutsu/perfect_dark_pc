@@ -90,7 +90,7 @@ void tagsReset(void)
 	g_NumTags = index;
 
 	if (g_NumTags) {
-		u32 size = index * 4;
+		u32 size = index * sizeof(u32*);
 		g_TagPtrs = mempAlloc(ALIGN16(size), MEMPOOL_STAGE);
 
 		for (index = 0; index < g_NumTags; index++) {

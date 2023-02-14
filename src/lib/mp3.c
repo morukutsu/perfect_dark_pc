@@ -35,6 +35,7 @@ extern f32 *var8009c644;
 
 void mp3Init(ALHeap *heap)
 {
+#if 0
 	bzero(&g_Mp3Vars, sizeof(struct mp3vars));
 
 #if VERSION < VERSION_NTSC_1_0
@@ -74,6 +75,7 @@ void mp3Init(ALHeap *heap)
 	}
 
 	func00038b90(func00038ba8);
+#endif
 }
 
 void mp3PlayFile(s32 romaddr, s32 filesize)
@@ -163,6 +165,7 @@ void func00037fa8(s32 arg0, s32 arg1)
 
 s32 func00037fc0(s32 arg0, Acmd **cmd)
 {
+#if 0
 	s32 i;
 	s32 sp60;
 	s32 sp5c = 0;
@@ -313,6 +316,8 @@ s32 func00037fc0(s32 arg0, Acmd **cmd)
 	}
 
 	return 1;
+#endif
+	return 0;
 }
 
 void func00038924(struct mp3vars *vars)

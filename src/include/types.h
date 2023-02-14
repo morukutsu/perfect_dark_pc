@@ -9,10 +9,15 @@
 #include "tiles.h"
 #include "gbi.h"
 
+#include <stdint.h> 
+
 #define bool s32
 #define ubool u32
-#define intptr_t s32
-#define uintptr_t u32
+//#define intptr_t s32
+//#define uintptr_t u32
+//#define intptr_t s64
+//#define uintptr_t u64
+
 #define romptr_t u32
 
 typedef s32 PakErr1;
@@ -435,10 +440,26 @@ struct modelrodata_gundl { // type 0x04
 	s16 unk12;
 };
 
+struct modelrodata_gundl_load { // type 0x04
+	u32 opagdl;
+	u32 xlugdl;
+	u32 baseaddr;
+	u32 vertices;
+	s16 numvertices;
+	s16 unk12;
+};
+
 struct modelrodata_distance { // type 0x08
 	f32 near;
 	f32 far;
 	struct modelnode *target;
+	u16 rwdataindex;
+};
+
+struct modelrodata_distance_load { // type 0x08
+	f32 near;
+	f32 far;
+	u32 target;
 	u16 rwdataindex;
 };
 
@@ -449,6 +470,17 @@ struct modelrodata_reorder { // type 0x09
 	f32 unk0c[3];
 	struct modelnode *unk18;
 	struct modelnode *unk1c;
+	s16 side;
+	u16 rwdataindex;
+};
+
+struct modelrodata_reorder_load { // type 0x09
+	f32 unk00;
+	f32 unk04;
+	f32 unk08;
+	f32 unk0c[3];
+	u32 unk18;
+	u32 unk1c;
 	s16 side;
 	u16 rwdataindex;
 };
@@ -494,6 +526,15 @@ struct modelrodata_chrgunfire { // type 0x0c
 	void *baseaddr;
 };
 
+struct modelrodata_chrgunfire_load { // type 0x0c
+	struct coord pos;
+	struct coord dim;
+	u32 texture;
+	f32 unk1c;
+	u16 rwdataindex;
+	u32 baseaddr;
+};
+
 struct modelrodata_type0d { // type 0x0d
 	u32 unk00;
 	u32 unk04;
@@ -516,6 +557,11 @@ struct modelrodata_type11 { // type 0x11
 
 struct modelrodata_toggle { // type 0x12
 	struct modelnode *target;
+	u16 rwdataindex;
+};
+
+struct modelrodata_toggle_load { // type 0x12
+	u32 target;
 	u16 rwdataindex;
 };
 
@@ -546,6 +592,21 @@ struct modelrodata_dl { // type 0x18
 	/*0x16*/ u16 numcolours;
 };
 
+struct modelrodata_dl_load { // type 0x18
+	/*0x00*/ u32 opagdl;
+	/*0x04*/ u32 xlugdl;
+	/*0x08*/ u32 colourtable; 
+	// Note: it seems the rodata colourtable is pointing to the baseaddr of the modeldef file
+	// That's why it's zero when we load it from the file
+
+	/*0x0c*/ u32 vertices; // colours follow this array
+	/*0x10*/ s16 numvertices;
+	/*0x12*/ s16 mcount;
+	/*0x14*/ u16 rwdataindex;
+	/*0x16*/ u16 numcolours;
+};
+
+
 struct modelrodata_type19 { // type 0x19
 	/*0x00*/ s32 numvertices;
 	/*0x04*/ struct coord vertices[4];
@@ -570,6 +631,7 @@ union modelrodata {
 	struct modelrodata_type19 type19;
 };
 
+// Note: this struct is bigger on PC
 struct modelnode {
 	/*0x00*/ u16 type;
 	/*0x04*/ union modelrodata *rodata;
@@ -577,6 +639,15 @@ struct modelnode {
 	/*0x0c*/ struct modelnode *next;
 	/*0x10*/ struct modelnode *prev;
 	/*0x14*/ struct modelnode *child;
+};
+
+struct modelnode_load {
+	/*0x00*/ u32 type;
+	/*0x04*/ u32 rodata;
+	/*0x08*/ u32 parent;
+	/*0x0c*/ u32 next;
+	/*0x10*/ u32 prev;
+	/*0x14*/ u32 child;
 };
 
 struct modeldef {
@@ -593,6 +664,20 @@ struct modeldef {
 	s16 rwdatalen; // in words
 	s16 numtexconfigs;
 	struct textureconfig *texconfigs;
+};
+
+struct modeldef_load {
+	u32 rootnode;
+	u32 skel;
+
+	u32 parts;
+
+	s16 numparts;
+	s16 nummatrices;
+	f32 scale;
+	s16 rwdatalen; // in words
+	s16 numtexconfigs;
+	u32 texconfigs;
 };
 
 struct model {
@@ -700,9 +785,22 @@ struct waygroup {
 	s32 unk08;
 };
 
+struct waygroup_load {
+	u32 neighbours;
+	u32 waypoints;
+	s32 unk08;
+};
+
 struct waypoint {
 	s32 padnum;
 	s32 *neighbours; // most significant two bits are booleans, remaining bits are waypoint index
+	s32 groupnum;
+	s32 unk0c;
+};
+
+struct waypoint_load {
+	s32 padnum;
+	u32 neighbours; // most significant two bits are booleans, remaining bits are waypoint index
 	s32 groupnum;
 	s32 unk0c;
 };
@@ -1448,6 +1546,49 @@ struct tvscreen {
 	/*0x70*/ f32 colinc;
 };
 
+struct tvscreen_load {
+	/*0x00*/ u32 cmdlist;
+	/*0x04*/ u16 offset;
+	/*0x06*/ s16 pause60;
+	/*0x08*/ u32 tconfig;
+	/*0x0c*/ f32 rot;
+	/*0x10*/ f32 xscale;
+	/*0x14*/ f32 xscalefrac;
+	/*0x18*/ f32 xscaleinc;
+	/*0x1c*/ f32 xscaleold;
+	/*0x20*/ f32 xscalenew;
+	/*0x24*/ f32 yscale;
+	/*0x28*/ f32 yscalefrac;
+	/*0x2c*/ f32 yscaleinc;
+	/*0x30*/ f32 yscaleold;
+	/*0x34*/ f32 yscalenew;
+	/*0x38*/ f32 xmid;
+	/*0x3c*/ f32 xmidfrac;
+	/*0x40*/ f32 xmidinc;
+	/*0x44*/ f32 xmidold;
+	/*0x48*/ f32 xmidnew;
+	/*0x4c*/ f32 ymid;
+	/*0x50*/ f32 ymidfrac;
+	/*0x54*/ f32 ymidinc;
+	/*0x58*/ f32 ymidold;
+	/*0x5c*/ f32 ymidnew;
+	/*0x60*/ u8 red;
+	/*0x61*/ u8 redold;
+	/*0x62*/ u8 rednew;
+	/*0x63*/ u8 green;
+	/*0x64*/ u8 greenold;
+	/*0x65*/ u8 greennew;
+	/*0x66*/ u8 blue;
+	/*0x67*/ u8 blueold;
+	/*0x68*/ u8 bluenew;
+	/*0x69*/ u8 alpha;
+	/*0x6a*/ u8 alphaold;
+	/*0x6b*/ u8 alphanew;
+	/*0x6c*/ f32 colfrac;
+	/*0x70*/ f32 colinc;
+};
+
+
 struct hov {
 	/*0x00*/ u8 type;
 	/*0x01*/ u8 flags;
@@ -1499,6 +1640,37 @@ struct defaultobj {
 	/*0x5a*/ s8 geocount;
 };
 
+struct defaultobj_load {
+	/*0x00*/ u16 extrascale;
+	/*0x02*/ u8 hidden2;
+	/*0x03*/ u8 type;
+	/*0x04*/ s16 modelnum;
+	/*0x06*/ s16 pad;
+	/*0x08*/ u32 flags;
+	/*0x0c*/ u32 flags2;
+	/*0x10*/ u32 flags3;
+	/*0x14*/ u32 prop;
+	/*0x18*/ u32 model;
+	/*0x1c*/ f32 realrot[3][3];
+	/*0x40*/ u32 hidden;
+	union {
+		/*0x44*/ u32 geotilef;
+		/*0x44*/ u32 geoblock;
+		/*0x44*/ u32 geocyl;
+		/*0x44*/ u32 unkgeo; // temporary, to indicate that I don't know which geo pointer is being used
+	};
+	union {
+		/*0x48*/ u32 projectile;
+		/*0x48*/ u32 embedment;
+	};
+	/*0x4c*/ s16 damage;
+	/*0x4e*/ s16 maxdamage;
+	/*0x50*/ u8 shadecol[4];
+	/*0x54*/ u8 nextcol[4];
+	/*0x58*/ u16 floorcol;
+	/*0x5a*/ s8 geocount;
+};
+
 struct doorobj { // objtype 0x01
 	struct defaultobj base;
 	/*0x5c*/ f32 maxfrac;
@@ -1541,6 +1713,48 @@ struct doorobj { // objtype 0x01
 	/*0xdb*/ u8 extra2;
 };
 
+struct doorobj_load { // objtype 0x01
+	struct defaultobj_load base;
+	/*0x5c*/ f32 maxfrac;
+	/*0x60*/ f32 perimfrac;
+	/*0x64*/ f32 accel;
+	/*0x68*/ f32 decel;
+	/*0x6c*/ f32 maxspeed;
+	/*0x70*/ u16 doorflags;
+	/*0x72*/ u16 doortype;
+	/*0x74*/ u32 keyflags;
+	/*0x78*/ s32 autoclosetime;
+	/*0x7c*/ f32 frac; // 0 = closed, maxfrac = fully open
+	/*0x80*/ f32 fracspeed;
+	/*0x84*/ s8 mode;
+	/*0x85*/ s8 glasshits;
+	/*0x86*/ s16 fadealpha;
+	/*0x88*/ s16 xludist;
+	/*0x8a*/ s16 opadist;
+	/*0x8c*/ struct coord startpos;
+	union {
+		struct {
+			/*0x98*/ u32 unk98;
+			/*0xa4*/ u32 unka4;
+		};
+		f32 mtx98[3][3];
+	};
+	/*0xbc*/ u32 sibling;
+	/*0xc0*/ s32 lastopen60;
+	/*0xc4*/ s16 portalnum;
+	/*0xc6*/ s8 soundtype;
+	/*0xc7*/ s8 fadetime60; // counts down
+	/*0xc8*/ s32 lastcalc60;
+	/*0xcc*/ u8 laserfade;
+	/*0xcd*/ u8 unusedmaybe[3];
+	/*0xd0*/ u8 shadeinfo1[4]; // player 1
+	/*0xd4*/ u8 shadeinfo2[4]; // player 2
+	/*0xd8*/ u8 actual1;
+	/*0xd9*/ u8 actual2;
+	/*0xda*/ u8 extra1;
+	/*0xdb*/ u8 extra2;
+};
+
 struct doorscaleobj { // objtype 0x02
 	u32 unk00;
 	s32 scale;
@@ -1553,6 +1767,24 @@ struct keyobj { // objtype 0x04
 
 struct cctvobj { // objtype 0x06
 	struct defaultobj base;
+
+	// Note y is being used as an abbreviation for yaw
+	/*0x5c*/ s16 lookatpadnum;
+	/*0x5e*/ s16 toleft;
+	/*0x60*/ Mtxf camrotm;
+	/*0xa0*/ f32 yzero;
+	/*0xa4*/ f32 yrot;
+	/*0xa8*/ f32 yleft;
+	/*0xac*/ f32 yright;
+	/*0xb0*/ f32 yspeed;
+	/*0xb4*/ f32 ymaxspeed;
+	/*0xb8*/ s32 seebondtime60;
+	/*0xbc*/ f32 maxdist;
+	/*0xc0*/ f32 xzero;
+};
+
+struct cctvobj_load { // objtype 0x06
+	struct defaultobj_load base;
 
 	// Note y is being used as an abbreviation for yaw
 	/*0x5c*/ s16 lookatpadnum;
@@ -1641,9 +1873,23 @@ struct singlemonitorobj { // objtype 0x0a
 	/*0xd3*/ u8 imagenum;
 };
 
+struct singlemonitorobj_load { // objtype 0x0a
+	struct defaultobj_load base;
+	/*0x5c*/ struct tvscreen_load screen;
+	/*0xd0*/ s16 owneroffset;
+	/*0xd2*/ s8 ownerpart;
+	/*0xd3*/ u8 imagenum;
+};
+
 struct multimonitorobj { // objtype 0x0b
 	struct defaultobj base;
 	struct tvscreen screens[4];
+	u8 imagenums[4];
+};
+
+struct multimonitorobj_load { // objtype 0x0b
+	struct defaultobj_load base;
+	struct tvscreen_load screens[4];
 	u8 imagenums[4];
 };
 
@@ -1679,6 +1925,34 @@ struct autogunobj { // objtype 0x0d
 	/*0xaa*/ s16 nextchrtest;
 };
 
+struct autogunobj_load { // objtype 0x0d
+	struct defaultobj_load base;
+	/*0x5c*/ s16 targetpad;
+	/*0x5e*/ s8 firing;
+	/*0x5f*/ u8 firecount;
+	/*0x60*/ f32 yzero;
+	/*0x64*/ f32 ymaxleft;
+	/*0x68*/ f32 ymaxright;
+	/*0x6c*/ f32 yrot;
+	/*0x70*/ f32 yspeed;
+	/*0x74*/ f32 xzero;
+	/*0x78*/ f32 xrot;
+	/*0x7c*/ f32 xspeed;
+	/*0x80*/ f32 maxspeed;
+	/*0x84*/ f32 aimdist;
+	/*0x88*/ f32 barrelspeed;
+	/*0x8c*/ f32 barrelrot;
+	/*0x90*/ s32 lastseebond60;
+	/*0x94*/ s32 lastaimbond60;
+	/*0x98*/ s32 allowsoundframe;
+	/*0x9c*/ u32 beam;
+	/*0xa0*/ f32 shotbondsum;
+	/*0xa4*/ u32 target;
+	/*0xa8*/ u8 targetteam;
+	/*0xa9*/ u8 ammoquantity;
+	/*0xaa*/ s16 nextchrtest;
+};
+
 struct linkgunsobj { // objtype 0x0e
 	u32 unk00;
 	s16 offset1;
@@ -1700,6 +1974,14 @@ struct linkliftdoorobj {
 	struct prop *door;
 	struct prop *lift;
 	struct linkliftdoorobj *next;
+	s32 stopnum;
+};
+
+struct linkliftdoorobj_load {
+	u32 unk00;
+	u32 door;
+	u32 lift;
+	u32 next;
 	s32 stopnum;
 };
 
@@ -1725,6 +2007,14 @@ struct tag { // objtype 0x16
 	/*0x06*/ s16 cmdoffset;
 	/*0x08*/ struct tag *next;
 	/*0x0c*/ struct defaultobj *obj;
+};
+
+struct tag_load { // objtype 0x16
+	/*0x00*/ u32 identifier; // always 0x00000016
+	/*0x04*/ u16 tagnum;
+	/*0x06*/ s16 cmdoffset;
+	/*0x08*/ u32 next;
+	/*0x0c*/ u32 obj;
 };
 
 struct objective { // objtype 0x17
@@ -1788,6 +2078,11 @@ struct glassobj { // objtype 0x2a
 	/*0x5c*/ s16 portalnum;
 };
 
+struct glassobj_load { // objtype 0x2a
+	struct defaultobj_load base;
+	/*0x5c*/ s16 portalnum;
+};
+
 struct safeobj { // objtype 0x2b
 	u32 unk00;
 };
@@ -1833,6 +2128,20 @@ struct liftobj { // objtype 0x30
 	/*0x88*/ struct coord prevpos;
 };
 
+struct liftobj_load { // objtype 0x30
+	struct defaultobj_load base;
+	/*0x5c*/ s16 pads[4];
+	/*0x64*/ u32 doors[4];
+	/*0x74*/ f32 dist;
+	/*0x78*/ f32 speed;
+	/*0x7c*/ f32 accel;
+	/*0x80*/ f32 maxspeed;
+	/*0x84*/ s8 soundtype;
+	/*0x85*/ s8 levelcur;
+	/*0x86*/ s8 levelaim;
+	/*0x88*/ struct coord prevpos;
+};
+
 struct linksceneryobj { // objtype 0x31
 	u32 unk00;
 	struct defaultobj *trigger;
@@ -1866,8 +2175,30 @@ struct hoverbikeobj { // objtype 0x33
 	/*0x0d8*/ f32 speedrel[2];
 };
 
+struct hoverbikeobj_load { // objtype 0x33
+	struct defaultobj_load base;
+	struct hov hov;
+	/*0x09c*/ f32 speed[2];
+	/*0x0a4*/ f32 prevpos[2];
+	/*0x0ac*/ f32 w;
+	/*0x0b0*/ f32 rels[2];
+	/*0x0b8*/ f32 exreal;
+	/*0x0bc*/ f32 ezreal;
+	/*0x0c0*/ f32 ezreal2;
+	/*0x0c4*/ f32 leanspeed;
+	/*0x0c8*/ f32 leandiff;
+	/*0x0cc*/ s32 maxspeedtime240;
+	/*0x0d0*/ f32 speedabs[2];
+	/*0x0d8*/ f32 speedrel[2];
+};
+
 struct hoverpropobj { // objtype 0x35
 	struct defaultobj base;
+	struct hov hov;
+};
+
+struct hoverpropobj_load { // objtype 0x35
+	struct defaultobj_load base;
 	struct hov hov;
 };
 
@@ -2817,8 +3148,20 @@ struct ailist {
 	s32 id;
 };
 
+struct ailist_load {
+	u32 list;
+	s32 id;
+};
+
 struct path {
 	/*0x00*/ s32 *pads;
+	/*0x04*/ u8 id;
+	/*0x05*/ u8 flags;
+	/*0x06*/ u16 len;
+};
+
+struct path_load {
+	/*0x00*/ u32 pads;
 	/*0x04*/ u8 id;
 	/*0x05*/ u8 flags;
 	/*0x06*/ u16 len;
@@ -2860,6 +3203,17 @@ struct stagesetup {
 	/*0x14*/ struct path *paths;
 	/*0x18*/ struct ailist *ailists;
 	/*0x1c*/ s8 *padfiledata;
+};
+
+struct stagesetup_load {
+	/*0x00*/ u32 waypoints;
+	/*0x04*/ u32 waygroups;
+	/*0x08*/ u32 cover;
+	/*0x0c*/ u32 intro;
+	/*0x10*/ u32 props;
+	/*0x14*/ u32 paths;
+	/*0x18*/ u32 ailists;
+	/*0x1c*/ u32 padfiledata;
 };
 
 struct noisesettings {
@@ -3570,6 +3924,22 @@ struct roomblock {
 	};
 };
 
+struct roomblock_load {
+	u8 type;
+	u32 next;
+	union {
+		struct { // type 0 (leaf)
+			u32 gdl;
+			u32 vertices;
+			u32 colours;
+		};
+		struct { // type 1 (parent)
+			u32 child;
+			u32 unk0c; // pointer to 2 coords at least
+		};
+	};
+};
+
 struct roomgfxdata {
 	/*0x00*/ struct gfxvtx *vertices;
 	/*0x04*/ u32 *colours;
@@ -3580,6 +3950,18 @@ struct roomgfxdata {
 	/*0x14*/ s16 numvertices;
 	/*0x16*/ s16 numcolours;
 	/*0x18*/ struct roomblock blocks[1];
+};
+
+struct roomgfxdata_load {
+	/*0x00*/ u32 vertices;
+	/*0x04*/ u32 colours;
+	/*0x08*/ u32 opablocks;
+	/*0x0c*/ u32 xlublocks;
+	/*0x10*/ s16 lightsindex;
+	/*0x12*/ s16 numlights;
+	/*0x14*/ s16 numvertices;
+	/*0x16*/ s16 numcolours;
+	/*0x18*/ struct roomblock_load blocks[1];
 };
 
 struct vtxbatch {
@@ -3803,7 +4185,24 @@ struct menudata_training {
 struct textureconfig {
 	union {
 		s32 texturenum;
+		// Note PC: increased texturenum size
+		//u64 texturenum;
 		u8 *textureptr;
+	};
+	u8 width;
+	u8 height;
+	u8 level;
+	u8 format;
+	u8 depth;
+	u8 s;
+	u8 t;
+	u8 unk0b; // loaded?
+};
+
+struct textureconfig_load {
+	union {
+		s32 texturenum;
+		u32 textureptr;
 	};
 	u8 width;
 	u8 height;
@@ -5588,7 +5987,8 @@ struct guncmd {
 	u8 type;
 	u8 unk01;
 	u16 unk02;
-	s32 unk04;
+	//s32 unk04; // Note PC: addresses of animations etc cannot fit in 32bits
+	u64 unk04;
 };
 
 struct pakthing {
@@ -5810,9 +6210,33 @@ struct fontchar {
 	u8 *pixeldata;
 };
 
+// Note PC
+// fontchar struct is loaded directly from rom but with a pixeldata pointer, it cannot be loaded as is
+struct fontchar_load {
+#if VERSION == VERSION_JPN_FINAL
+	u16 index;
+#else
+	u8 index;
+#endif
+	s8 baseline;
+	u8 height;
+	u8 width;
+#if VERSION == VERSION_JPN_FINAL
+	s16 kerningindex;
+#else
+	s32 kerningindex;
+#endif
+	u32 pixeldata;
+};
+
 struct font {
 	s32 kerning[13 * 13];
 	struct fontchar chars[94]; // can be 135 in PAL
+};
+
+struct font_load {
+	s32 kerning[13 * 13];
+	struct fontchar_load chars[94]; // can be 135 in PAL
 };
 
 typedef union {
@@ -6284,7 +6708,10 @@ struct tex {
 	/*0x0c*/ u32 lutmodeindex : 2;
 	/*0x0c*/ u32 unk0c_02 : 1;
 	/*0x0c*/ u32 unk0c_03 : 1;
-	/*0x0c*/ u32 next : 24;
+	/*0x0c u32 next : 24;*/
+	
+	// Note PC: increased the size of the next pointer in the bitfield
+	u64 next : 64; // from 24bits u32 backed to 64bits pointer
 };
 
 struct texcacheitem {

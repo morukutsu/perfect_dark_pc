@@ -12,5 +12,6 @@ struct huft {
 };
 
 u32 inflate1173(void *src, void *dst, struct huft *hlist);
+u32 getInflate1173Offset();
 
 #endif
