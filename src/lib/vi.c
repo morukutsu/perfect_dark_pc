@@ -264,7 +264,7 @@ void viBlack(bool black)
 #endif
 }
 
-void vi00009ed4(void)
+void viHandleRetrace(void)
 {
 #if 0
 	s32 prevmask;
