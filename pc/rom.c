@@ -15,6 +15,10 @@ void romInit()
     debugPrint(PC_DBG_FLAG_ROM, "rom init\n");
 
     FILE* f = fopen("../pd.ntsc-final.z64", "r");
+    if (!f) {
+        f = fopen("pd.ntsc-final.z64", "r");
+    }
+    
     if (f) {
         g_romData = nativeMalloc(romSize);
         size_t read = fread(g_romData, romSize, 1, f);

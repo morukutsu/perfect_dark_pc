@@ -1014,15 +1014,19 @@ void mainLoop(void)
 		viReset(g_StageNum);
 		frametimeCalculate();
 		profileReset();
-		
+
+#if 0
 		while (osRecvMesg(&g_SchedMesgQueue, &msg, OS_MESG_NOBLOCK) != -1) {
 			// empty
 		}
+#endif
 
 		while (g_MainChangeToStageNum < 0 || g_MainNumGfxTasks != 0) {
 			s32 cycles;
 
+#if 0
 			osRecvMesg(&g_SchedMesgQueue, &msg, OS_MESG_BLOCK);
+#endif
 
 #if VERSION < VERSION_NTSC_1_0
 			bootCheckStackOverflow();

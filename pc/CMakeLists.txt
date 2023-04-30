@@ -72,6 +72,8 @@ set(PDARK_LIB_FILES
     "${PDARK_SRC_DIR}/lib/vi.c"
     "${PDARK_SRC_DIR}/lib/videbug.c"
     "${PDARK_SRC_DIR}/lib/vm.c"
+    "${PDARK_SRC_DIR}/lib/modelasm_c.c"
+
 
     "${PDARK_SRC_DIR}/lib/ultra/audio/bnkf.c"
     "${PDARK_SRC_DIR}/lib/ultra/audio/cents2ratio.c"

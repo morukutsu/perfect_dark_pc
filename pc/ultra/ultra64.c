@@ -89,6 +89,7 @@ u32	osGetCount(void)
 	return 0;
 }
 
+/*
 float sinf(float angle)
 {
 	return (float)sin((double)angle);
@@ -98,6 +99,7 @@ float cosf(float angle)
 {
 	return (float)cos((double)angle);
 }
+*/
 
 float sqrtf(float value)
 {

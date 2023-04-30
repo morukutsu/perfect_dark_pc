@@ -1,3 +1,41 @@
+# Perfect Dark Decompilation (PC Port)
+
+This repository contains a WIP PC port based on the complete decompilation of Perfect Dark 64.
+This project is extremely WIP and there are plenty of things left to be done to reach a playable state.
+
+## Status
+
+- Loads the initial parts of the game (legal, logos and some parts of the CI)
+- GPU implementation is incomplete: lighting is not implemented, many textures formats are missing, etc...
+- Compiles with a lot of warnings, expect crashes
+- At the moment, do not expect to build it smoothly, this is only for collaborating on the development
+- The only part of the game displayed accurately is the legal menu
+
+## TODO
+
+There are many tasks to do, here are some ideas if you would like to collaborate:
+
+- No sound emulation
+- No joypad/keyboard/mouse input
+- Integrate imgui for easier debugging controls
+- Fix warnings (mostly related to bad pointers <-> int casts)
+- Update the CMake project and source to support builds on Windows and Linux
+
+## Requirements
+
+This port requires to extract assets from the ROM:
+| ntsc-final | NTSC 8.7 final | e03b088b6ac9e0080440efed07c1e40f |
+
+- Follow the instructions to extract the ROM (see 'Perfect Dark Decompilation' section, the original README)
+- Place the ROM called 'pd.ntsc-final.z64' next to the PC build executable
+
+The next step is to build the project:
+
+- Install CMake
+- Use CMake to create the project build files. Run `cmake -S . -B ./pc_build`
+- Go to the pc_build directory `cd ./pc_build`
+- Run `make`
+
 # Perfect Dark Decompilation
 
 This repository contains a complete decompilation of Perfect Dark for the Nintendo 64.
@@ -16,22 +54,22 @@ All versions of the game are fully decompiled but a small handful of functions a
 
 For Arch Linux:
 
-* Install these packages: `binutils fakeroot gcc make python vim`
-* Install from AUR: `armips`
-* Install from AUR: a MIPS binutils package of your choice (eg. `mips-elf-binutils`)
-* Install from AUR: a MIPS gcc package of your choice (eg. `mips-elf-gcc`)
+- Install these packages: `binutils fakeroot gcc make python vim`
+- Install from AUR: `armips`
+- Install from AUR: a MIPS binutils package of your choice (eg. `mips-elf-binutils`)
+- Install from AUR: a MIPS gcc package of your choice (eg. `mips-elf-gcc`)
 
 For Debian and Ubuntu:
 
-* Install these packages: `binutils-mips-linux-gnu build-essential gcc-mips-linux-gnu libc6-dev-i386 libcapstone-dev make`
-* Compile and install `armips`
+- Install these packages: `binutils-mips-linux-gnu build-essential gcc-mips-linux-gnu libc6-dev-i386 libcapstone-dev make`
+- Compile and install `armips`
 
 ## ROM Versions
 
 Perfect Dark has six known versions:
 
 | ROM ID     | Description                                 | MD5 Checksum                     |
-|------------|---------------------------------------------|----------------------------------|
+| ---------- | ------------------------------------------- | -------------------------------- |
 | ntsc-beta  | NTSC 6.4 beta                               | aa93f4df16fceada399a749f5ad2f273 |
 | ntsc-1.0   | NTSC 8.7 final (the initial, buggy release) | 7f4171b0c8d17815be37913f535e4e93 |
 | ntsc-final | NTSC 8.7 final                              | e03b088b6ac9e0080440efed07c1e40f |
@@ -52,8 +90,8 @@ The extract command will also create an `extracted/ntsc-final` directory. This d
 
 ## Compiling
 
-* Run `git submodule update --init --recursive`. You only have to do this once.
-* Run `make -j` to build the ROM. The ROM will be written to `build/ntsc-final/pd.z64`.
+- Run `git submodule update --init --recursive`. You only have to do this once.
+- Run `make -j` to build the ROM. The ROM will be written to `build/ntsc-final/pd.z64`.
 
 ## How do I know the built files are matching?
 
