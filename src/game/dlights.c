@@ -424,7 +424,6 @@ void roomInitLights(s32 roomnum)
 	light = (struct light *)&g_BgLightsFileData[(u32)g_Rooms[roomnum].lightindex * 0x22];
 
 	for (i = 0; i < room->numlights; i++) {
-		// PC: endianness
 		light->roomnum = swap_uint16(light->roomnum);
 		light->colour = swap_uint16(light->colour);
 
@@ -1683,9 +1682,6 @@ void roomHighlight(s32 roomnum)
 	}
 }
 
-/*
-	Note PC: allocations in this function must be changed to take into account the size of pointers on 64bits
-*/
 void func0f004c6c(void)
 {
 	s32 sp44;
@@ -1699,7 +1695,7 @@ void func0f004c6c(void)
 	u8 *ptr;
 	u8 *backupptr;
 
-	// Note PC: increasing sizes from 4 to 8, done without analyzing exactly how this code works
+	// Note PC: increased sizes from 4 to 8, done without analyzing exactly how this code works
 	sp44 = align16(0x2000);
 	sp40 = align16(g_NumPortals * sizeof(void*));
 	sp3c = align16(g_NumPortals * 0xc);

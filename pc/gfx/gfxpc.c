@@ -1,8 +1,10 @@
 #include "gfxpc.h"
 
+#include "lib/mtx.h"
 #include "print.h"
 #include "hashmap.h"
 #include "byteswap.h"
+#include "native_functions.h"
 
 #include "va_list.h"
 #include <stdio.h>
@@ -13,6 +15,7 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
+#include "math.h"
 #include "linmath.h"
 
 #include <signal.h>
@@ -63,7 +66,7 @@ struct Vertex {
             float r, g, b, a, x, y, z, w, u, v;
         };
         float f[VTX_ELEM_COUNT];
-    }
+    };
 };
 
 struct RDPTile {
@@ -76,13 +79,13 @@ struct RDPTile {
 };
 
 struct RDPTextureDRAM {
-    const uint8_t *addr;
+    uint8_t *addr;
     uint8_t siz;
     uint8_t tile_number;
 };
 
 struct RDPTextureLoadInfo {
-    const uint8_t *addr;
+    uint8_t *addr;
     uint32_t size_bytes;
 };
 
@@ -232,7 +235,7 @@ char* gfx_pc_read_text_file(const char* path)
         unsigned long len = (unsigned long)ftell(f);
         fseek(f, 0, SEEK_SET);
 
-        char* out = malloc(len + 1);
+        char* out = nativeMalloc(len + 1);
         fread(out, len, 1, f);
         out[len - 1] = 0;
 
@@ -273,14 +276,14 @@ void gfx_pc_init()
     // OGL
     debugPrint(PC_DBG_FLAG_GFX, "Compile vertex shader\n");
     if (gfx_create_shader(GL_VERTEX_SHADER, (const char*)vertex_shader, &vs))
-        exit(1);
+        fatalExit();
 
     debugPrint(PC_DBG_FLAG_GFX, "Compile fragment shader\n");
     if (gfx_create_shader(GL_FRAGMENT_SHADER, (const char*)fragment_shader, &fs))
-        exit(1);
+        fatalExit();
 
-    free(vertex_shader);
-    free(fragment_shader);
+    nativeFree(vertex_shader);
+    nativeFree(fragment_shader);
 
     program = glCreateProgram();
     glAttachShader(program, vs );
@@ -304,7 +307,7 @@ void gfx_pc_init()
 
     mat4x4 projection_matrix;
     mat4x4_ortho(projection_matrix, 0.0f, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT, 0.0f, 0.0f, 100.0f);
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, projection_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, (const GLfloat*)projection_matrix);
 
     // Create simple shader for drawing rectangles?
     glGenVertexArrays(1, &rectVao);
@@ -397,6 +400,54 @@ void import_texture_i8(int tile, struct Texture* texture)
     uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
 
     upload_texture(rgba32_buf, width, height, texture);
+}
+
+void gfx_get_texture_size(uint32_t tile, uint32_t* w, uint32_t* h)
+{
+    uint32_t ww = 0, hh = 0;
+
+    uint8_t fmt = rdp.tiles[tile].fmt;
+    uint8_t siz = rdp.tiles[tile].siz;
+    uint8_t rshift = 0, lshift = 0;
+
+    if (siz == G_IM_SIZ_8b) {
+    } else if (siz == G_IM_SIZ_4b) {
+        lshift = 1;
+    } else if (siz == G_IM_SIZ_16b) {
+        rshift = 1;
+    } else {
+        debugPrint(PC_DBG_FLAG_GFX, "ERROR gfx_get_texture_size unsupported fmt\n");
+        fatalExit();
+    }
+
+    ww = rdp.tiles[tile].line_size_bytes;
+
+    if (rshift)
+        ww = ww >> rshift;
+    else if (lshift)
+        ww = ww << lshift;
+
+    uint32_t size_bytes = 0;
+    if (rsp.tex_level == 0) {
+        size_bytes = rdp.texture_load_info[tile].size_bytes;
+    } else {
+        uint32_t tile_ww = 0, tile_hh = 0;
+        tile_ww = (rdp.tiles[tile].lrs - rdp.tiles[tile].uls + 4) / 4;
+        tile_hh = (rdp.tiles[tile].lrt - rdp.tiles[tile].ult + 4) / 4;
+
+        size_bytes = tile_ww * tile_hh;
+
+        // Swapping lshift and rshift because here we convert from texels to bytes
+        if (rshift)
+            size_bytes = size_bytes << rshift;
+        else if (lshift)
+            size_bytes = size_bytes >> lshift;
+    }
+
+    hh = size_bytes / rdp.tiles[tile].line_size_bytes;
+
+    *w = ww;
+    *h = hh;
 }
 
 void import_texture_rgba16(int tile, struct Texture* texture)
@@ -519,54 +570,6 @@ void vtx_copy(struct Vertex* src, float* dst)
 #define FX_10_5_TO_F(v) ((float)(v) / 32.0f)
 #define FX_5_10_TO_F(v) ((float)(v) / 1024.0f)
 
-void gfx_get_texture_size(uint32_t tile, uint32_t* w, uint32_t* h)
-{
-    uint32_t ww = 0, hh = 0;
-
-    uint8_t fmt = rdp.tiles[tile].fmt;
-    uint8_t siz = rdp.tiles[tile].siz;
-    uint8_t rshift = 0, lshift = 0;
-
-    if (siz == G_IM_SIZ_8b) {
-    } else if (siz == G_IM_SIZ_4b) {
-        lshift = 1;
-    } else if (siz == G_IM_SIZ_16b) {
-        rshift = 1;
-    } else {
-        debugPrint(PC_DBG_FLAG_GFX, "ERROR gfx_get_texture_size unsupported fmt\n");
-        exit(1);
-    }
-
-    ww = rdp.tiles[tile].line_size_bytes;
-
-    if (rshift)
-        ww = ww >> rshift;
-    else if (lshift)
-        ww = ww << lshift;
-
-    uint32_t size_bytes = 0;
-    if (rsp.tex_level == 0) {
-        size_bytes = rdp.texture_load_info[tile].size_bytes;
-    } else {
-        uint32_t tile_ww = 0, tile_hh = 0;
-        tile_ww = (rdp.tiles[tile].lrs - rdp.tiles[tile].uls + 4) / 4;
-        tile_hh = (rdp.tiles[tile].lrt - rdp.tiles[tile].ult + 4) / 4;
-
-        size_bytes = tile_ww * tile_hh;
-
-        // Swapping lshift and rshift because here we convert from texels to bytes
-        if (rshift)
-            size_bytes = size_bytes << rshift;
-        else if (lshift)
-            size_bytes = size_bytes >> lshift;
-    }
-
-    hh = size_bytes / rdp.tiles[tile].line_size_bytes;
-
-    *w = ww;
-    *h = hh;
-}
-
 void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip) {
     struct Texture* texture = import_texture(tile);
 
@@ -642,8 +645,8 @@ void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry
         0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, projection_matrix);
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, identity_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, (const GLfloat *)projection_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, (const GLfloat *)identity_matrix);
 
     glUniform1i(glGetUniformLocation(program, "tex"), 0);
 
@@ -738,8 +741,8 @@ void gfx_dp_fill_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry)
         0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, projection_matrix);
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, identity_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, (const GLfloat *)projection_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, (const GLfloat *)identity_matrix);
 
     glUniform1i(glGetUniformLocation(program, "tex"), 0);
 
@@ -820,7 +823,7 @@ void gfx_sp_tri4(uint8_t x1, uint8_t y1, uint8_t z1, uint8_t x2, uint8_t y2, uin
             struct Vertex* rspVtx[3] = { &rsp.vertices[v1], &rsp.vertices[v2], &rsp.vertices[v3] };
             
             // TODO: WHY this is needed to dislay something? it seems the z coordinate is larger than w so it's not displaying anything
-            float zScale = 0.5f;
+            float zScale = 1.0f;
             
             //print("1 x %f y %f z %f w %f\n", rspVtx[0]->x, rspVtx[0]->y, rspVtx[0]->z, rspVtx[0]->w);
             //print("2 x %f y %f z %f w %f\n", rspVtx[1]->x, rspVtx[1]->y, rspVtx[1]->z, rspVtx[1]->w);
@@ -883,8 +886,8 @@ void gfx_sp_tri4(uint8_t x1, uint8_t y1, uint8_t z1, uint8_t x2, uint8_t y2, uin
         0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, identity_matrix);
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, identity_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, (const GLfloat *)identity_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, (const GLfloat *)identity_matrix);
 
     glUniform1i(glGetUniformLocation(program, "tex"), 0);
 
@@ -1020,8 +1023,8 @@ void gfx_dbg_cube()
 
     mat4x4_look_at(cam_matrix, eye, center, up);
 
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, projection_matrix);
-    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, cam_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, (const GLfloat *)projection_matrix);
+    glUniformMatrix4fv(glGetUniformLocation(program, "u_modelview_matrix" ), 1, GL_FALSE, (const GLfloat *)cam_matrix);
 
     //glUniformMatrix4fv(glGetUniformLocation(program, "u_projection_matrix" ), 1, GL_FALSE, identity_matrix);
     glUniform1i(glGetUniformLocation(program, "tex"), 0);
@@ -1133,7 +1136,7 @@ void gfx_dp_set_tile_size(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs
     //print("gfx_dp_set_tile_size tile %x uls %x ult %x lrs %x lrt %x\n", tile, uls, ult, lrs, lrt);
 }
 
-void gfx_dp_set_texture_image(uint32_t format, uint32_t size, uint32_t width, const void* addr) {
+void gfx_dp_set_texture_image(uint32_t format, uint32_t size, uint32_t width, void* addr) {
     rdp.texture_to_load.addr = addr;
     rdp.texture_to_load.siz = size;
     //print("- gfx_dp_set_texture_image addr: %016llx\n", rdp.texture_to_load.addr);
@@ -1392,7 +1395,7 @@ void gfx_sp_mtx(const void* addr, u32 flags)
         else 
         {
             debugPrint(PC_DBG_FLAG_GFX, "TODO handle gfx_sp_mtx G_MTX_PROJECTION / PUSH?\n");
-            exit(1);
+            fatalExit();
         }
     } 
     else 
@@ -1421,7 +1424,7 @@ void gfx_sp_mtx(const void* addr, u32 flags)
             // Unless this flag is present in a display list loaded from a file
             // This is not used by the game
             debugPrint(PC_DBG_FLAG_GFX, "TODO handle gfx_sp_mtx G_MTX_MODELVIEW / PUSH?\n");
-            exit(1);
+            fatalExit();
         }
     }
 
@@ -1695,7 +1698,7 @@ void gfx_execute_commands(Gfx* gdl, Gfx* gdlEnd)
                     gfx_execute_commands((Gfx*)ext->memPtr, (Gfx*)0xFFFFFFFFFFFFFFFFULL);
                 } else {
                     debugPrint(PC_DBG_FLAG_GFX, "- extradata not found\n");
-                    exit(1);
+                    fatalExit();
                 }
             } 
             else 
@@ -1709,7 +1712,7 @@ void gfx_execute_commands(Gfx* gdl, Gfx* gdlEnd)
                 {
                     debugPrint(PC_DBG_FLAG_GFX, "- extradata not found\n");
                     debugPrint(PC_DBG_FLAG_GFX, "0x%x G_DL (branch): %x\n", opcodeCount, (gdl->words.w1));
-                    exit(1);
+                    fatalExit();
                 }
             }
         }

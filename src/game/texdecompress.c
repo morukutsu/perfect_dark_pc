@@ -237,19 +237,10 @@ s32 texInflateZlib(u8 *src, u8 *dst, s32 arg2, s32 forcenumimages, struct texpoo
 		u32 offset = getInflate1173Offset();
 
 		/*
-		if (numimages > 1) {
-			print("offset: %d\n", offset);
-
-			for (int i = 0; i < 32; i++) {
-				print("%02x ", var800ab540[offset + i]);
-			}
-			print("\n");
-
-		}
+			The original version of this code is
+				texSetBitstring(rzipGetSomething());
+			Here we manually set this value
 		*/
-
-		//texSetBitstring(rzipGetSomething());
-		// PC
 		texSetBitstring(var800ab540 + offset + 5);
 
 		if (arg2 == 1) {
@@ -2117,8 +2108,6 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *pool, s32 arg2)
 			texLoad((s32 *)((intptr_t)bytes + 4), pool, arg2, NULL);
 		}
 
-		// Note PC: if we increase the size of each display list element, this function will not work anymore
-		// Tag: Display List Element Size
 		bytes += 8;
 	}
 }
@@ -2266,16 +2255,9 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2, void* textureptr)
 			// - rightpos is the head of a linked list, so grab it and find the tail
 			// - set rightpos to a spot in the buffer that can fit a tex before it
 			// - set leftpos to 0x10 after rightpos
-
-			// Note PC
-			// When compiling in 64 bits, some structures might be bigger because of the increased size of pointers
-			// This is probably going to cause problems at some point because the game might assume strict memory sizes
-			// TODO PC: check this code by allocating two textures to check if the pool iteration works
-			// PHYS_TO_K0(tail->next) destroys 64 pointers, must fix
 			if (usingsharedpool) {
 				tail = pool->rightpos;
-				//pool->rightpos = (struct tex *) ((((uintptr_t) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
-				pool->rightpos = (struct tex *) ((((u64) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
+				pool->rightpos = (struct tex *) ((((uintptr_t) buffer5kb + 0xf) >> 4 << 4) + sizeof(struct tex));
 				pool->leftpos = ((u8 *) pool->rightpos + sizeof(struct tex));
 
 				while (tail) {
@@ -2329,9 +2311,7 @@ void texLoad(s32 *updateword, struct texpool *pool, bool arg2, void* textureptr)
 				pool->rightpos->next = 0;
 
 				if (tail != NULL) {
-					// TODO PC: FIX
-					//tail->next = (uintptr_t) pool->rightpos & 0xffffff;
-					tail->next = (u64) pool->rightpos;
+					tail->next = (uintptr_t) pool->rightpos;
 				} else {
 					pool->head = pool->rightpos;
 				}

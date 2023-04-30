@@ -504,10 +504,6 @@ void mainInit(void)
 			}
 		}
 
-        // Note PC:
-		// no need to port this, it seems the intent is to display the copyright on screen
-		// we can just do that
-
 #ifdef PC_DISABLED
 		viSetMode(VIMODE_HI);
 		viConfigureForCopyright(fb);
@@ -1069,10 +1065,6 @@ void mainLoop(void)
 #endif
 			}
 #endif
-
-
-			// NOTE PC THIS BREAK SHOULD NOT BE HERE
-			//break;
 		}
 
 		lvStop();

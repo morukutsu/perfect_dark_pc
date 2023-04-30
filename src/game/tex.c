@@ -842,18 +842,9 @@ s32 texLoadFromGdl(Gfx *arg0, s32 gdlsizeinbytes, Gfx *arg2, struct texpool *poo
 	// Iterate on the display list
 	while (gdlLeftCount > 0) 
 	{
+		// Rewrote this part of the code to access opcode field using bitwise ops instead of bitfields
         u8 opcode = s5->words.w0 >> 24;
 
-		/* Accessing bitfields on PC seems to be a bit broken, not 100% sure why, probably endianess related */
-		/*
-			NOTE PC
-			When entering this case, it seems the command opcode is G_VTX (4)
-			With the pattern 04 F 000 C0
-			In this case, w1 would point to an addr to load vertices from, but it's a texturenum instead?
-			It's weird, should this code check if the command is a texture command before doing this?
-			(see problem above, probably bitfield related!)
-		*/
-		//switch (s5->texture.cmd) 
 		switch (opcode) 
 		{
 		case 0xc0: // Repurposed?

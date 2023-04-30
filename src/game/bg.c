@@ -46,7 +46,6 @@
 
 #include "print.h"
 #include "byteswap.h"
-//#include "gfx/hashmap.h"
 #include "native_functions.h"
 #include "offsetsmap.h"
 

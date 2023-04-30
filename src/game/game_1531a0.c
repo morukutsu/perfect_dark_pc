@@ -277,8 +277,6 @@ void textLoadFont(u32 romstart, u32 romend, struct font **fontptr, struct fontch
 	font = mempAlloc(newStructureSize + fontDataSize, MEMPOOL_STAGE);
 	chars = font->chars;
 
-	//dmaExec(font, (romptr_t) romstart, len);
-
 	// PC: load the structure from ROM then copy to the runtime structure
 	fontLoad = (struct font_load *)nativeMalloc(len);
 	dmaExec(fontLoad, (romptr_t)romstart, len);
@@ -2312,8 +2310,6 @@ Gfx *textRenderProjected(Gfx *gdl, s32 *x, s32 *y, char *text, struct fontchar *
 #endif
 	f32 alpha;
 
-	//print("TEXT RENDER START: %s\n", text);
-
 	static u32 sbrd = 0x00000000;
 
 	spb0 = var8007fad0;
@@ -2432,8 +2428,7 @@ Gfx *textRenderProjected(Gfx *gdl, s32 *x, s32 *y, char *text, struct fontchar *
 	gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, osVirtualToPhysical(var800801d8jf));
 	var80080104jf = true;
 #else
-	//gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, osVirtualToPhysical(var8007fb3c));
-	gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, var8007fb3c);
+	gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, osVirtualToPhysical(var8007fb3c));
 #endif
 
 	gDPLoadSync(gdl++);
@@ -2687,8 +2682,7 @@ Gfx *textRender(Gfx *gdl, s32 *x, s32 *y, char *text,
 
 	gDPPipeSync(gdl++);
 	gDPSetTextureLUT(gdl++, G_TT_IA16);
-	//gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, osVirtualToPhysical(&var8007fb5c));
-	gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, &var8007fb5c);
+	gDPSetTextureImage(gdl++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 1, osVirtualToPhysical(&var8007fb5c));
 	gDPLoadSync(gdl++);
 	gDPLoadTLUTCmd(gdl++, 6, 31);
 

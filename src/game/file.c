@@ -4154,7 +4154,6 @@ void fileLoad(u8 *dst, u32 allocationlen, u32 *romaddrptr, struct fileinfo *info
 		// DMA the compressed data to scratch space then inflate
 		u8 *scratch = (dst + allocationlen) - ((romsize + 7) & 0xfffffff8);
 
-		//if ((uintptr_t)scratch - (uintptr_t)dst < 8) {
 		if (scratch - dst < 8) {
 			info->loadedsize = 0;
 		} else {

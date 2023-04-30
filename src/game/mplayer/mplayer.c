@@ -29,8 +29,6 @@
 #include "data.h"
 #include "types.h"
 
-#include "print.h"
-
 // bss
 struct chrdata *g_MpAllChrPtrs[MAX_MPCHRS];
 struct mpchrconfig *g_MpAllChrConfigPtrs[MAX_MPCHRS];
@@ -560,7 +558,6 @@ void mpSetDefaultNamesIfEmpty(void)
 	if (g_MpSetup.name[0] == '\0') {
 		strcpy(g_MpSetup.name, langGet(L_MISC_438)); // empty string
 	}
-
 
 	// Team names
 	for (i = 0; i < 8; i++) {

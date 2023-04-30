@@ -58,9 +58,7 @@ void stageParseTiles(void)
 
 	u32 count = 0;
 	while (geo < end) {
-		// PC: convert endianess
 		geo->flags = swap_uint16(geo->flags);
-		//print("count: %d/%d - geo type: %x\n", count, g_TileNumRooms, geo->type);
 		
 		if (geo->type == GEOTYPE_TILE_I) {
 			struct geotilei *tile = (struct geotilei *) geo;
