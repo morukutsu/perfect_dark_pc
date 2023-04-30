@@ -16,24 +16,24 @@ class Extractor:
         self.extract_all()
 
     def extract_all(self):
-        #self.extract_accessingpak()
-        #self.extract_animations()
-        #self.extract_audio()
-        #self.extract_bootloader()
-        #self.extract_copyright()
-        #self.extract_data()
-        #self.extract_files()
-        #self.extract_firingrange()
-        #self.extract_fonts()
-        #self.extract_game()
-        #self.extract_getitle()
-        #self.extract_jpnfonts()
-        #self.extract_lib()
-        #self.extract_mpconfigs()
+        self.extract_accessingpak()
+        self.extract_animations()
+        self.extract_audio()
+        self.extract_bootloader()
+        self.extract_copyright()
+        self.extract_data()
+        self.extract_files()
+        self.extract_firingrange()
+        self.extract_fonts()
+        self.extract_game()
+        self.extract_getitle()
+        self.extract_jpnfonts()
+        self.extract_lib()
+        self.extract_mpconfigs()
         self.extract_mpstrings()
-        #self.extract_preamble()
-        #self.extract_textureconfig()
-        #self.extract_textures()
+        self.extract_preamble()
+        self.extract_textureconfig()
+        self.extract_textures()
 
     def extract_accessingpak(self):
         # ntsc-beta doesn't have this texture
@@ -212,7 +212,6 @@ class Extractor:
 
     def extract_mpstrings_lang(self, index, lang):
         addr = self.val('mpconfigs') + 0x68 * 44 + 0x3700 * index
-        print("mpstring " + lang+ " - start:" + hex(addr) + " - end:" + hex(addr+0x3700))
         self.write_extracted('mpstrings%s.bin' % lang, self.rom[addr:addr+0x3700])
 
     def extract_firingrange(self):
@@ -222,7 +221,6 @@ class Extractor:
     def extract_font(self, startvar, endvar, fontname):
         start = self.val(startvar)
         end = self.val(endvar)
-        print(fontname + " - start:" + hex(start) + " - end:" + hex(end))
         self.write_asset('fonts/%s.bin' % fontname, self.rom[start:end])
 
     def extract_fonts(self):
@@ -252,17 +250,12 @@ class Extractor:
 
     def extract_textures(self):
         base = self.val('textures')
-        print(hex(base))
         datalen = 0x294960 if self.romid == 'jpn-final' else 0x291d60
         tablepos = base + datalen
-        print("tablepos: " + hex(tablepos))
-
         index = 0
         while True:
             start = int.from_bytes(self.rom[tablepos+1:tablepos+4], 'big')
             end = int.from_bytes(self.rom[tablepos+9:tablepos+12], 'big')
-            print("+ pos: " + hex(tablepos) + "[" + hex(start) + ":" + hex(end) + "]")
-
             if int.from_bytes(self.rom[tablepos+12:tablepos+16], 'big') != 0:
                 break
             texturedata = self.rom[base+start:base+end]
