@@ -83,7 +83,12 @@ void rdpCreateTask(Gfx *gdlstart, Gfx *gdlend, u32 arg2, void *msg)
 {
 	gfx_start();
 	gfx_execute_commands(gdlstart, gdlend);
-	gfx_extradata_clear();
+
+	/*
+		Note: cannot clear the extradata every frame because then we lose the pointers written during a previous frame
+		Will need to find a safe way to garbage collect old extradata items?
+	*/
+	//gfx_extradata_clear();
     //exit(1);
 	
 #if 0
