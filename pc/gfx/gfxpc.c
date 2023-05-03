@@ -30,6 +30,8 @@
 #define GFXPC_DBG_MATRICES 0          // Debug output matrices after a matrix state change
 #define GFXPC_DEBUG_CC 0              // Display color combiner settings
 
+// TODO: add a debug option to disable the texture cache
+
 char* vertex_shader;
 char* fragment_shader;
 static const int SCREEN_WIDTH = 640;
@@ -348,6 +350,8 @@ void import_texture_ci4(int tile, struct Texture* texture) {
     
     //print("- import_texture_ci4 addr: %016llx\n", rdp.texture_load_info[tile].addr);
     u32 tlut_ia16 = (rdp.other_mode_h & (3U << G_MDSFT_TEXTLUT)) == G_TT_IA16;
+    u32 tlut_rgba = (rdp.other_mode_h & (3U << G_MDSFT_TEXTLUT)) == G_TT_RGBA16;
+
     if (tlut_ia16) 
     {
         // FMT: iiiiiii aaaaaaaa
@@ -370,13 +374,102 @@ void import_texture_ci4(int tile, struct Texture* texture) {
     } 
     else 
     {
-        debugPrint(PC_DBG_FLAG_GFX, "TODO unhandled import_texture_ci4 mode\n");
-        //exit(1);
+        if (tlut_rgba)
+        {
+            for (uint32_t i = 0; i < rdp.texture_load_info[tile].size_bytes * 2; i++) {
+                uint8_t byte = rdp.texture_load_info[tile].addr[i / 2];
+                uint8_t idx = (byte >> (4 - (i % 2) * 4)) & 0xf;
+
+                uint16_t col16 = (rdp.palette[idx * 2] << 8) | rdp.palette[idx * 2 + 1]; // Big endian load
+
+                uint8_t a = col16 & 1;
+                uint8_t r = col16 >> 11;
+                uint8_t g = (col16 >> 6) & 0x1f;
+                uint8_t b = (col16 >> 1) & 0x1f;
+
+                rgba32_buf[4*i + 0] = SCALE_5_8(r);
+                rgba32_buf[4*i + 1] = SCALE_5_8(g);
+                rgba32_buf[4*i + 2] = SCALE_5_8(b);
+                rgba32_buf[4*i + 3] = a ? 255 : 0;
+            }
+        }
+        else
+        {
+            debugPrint(PC_DBG_FLAG_GFX, "TODO unhandled import_texture_ci4 mode\n");
+            //exit(1);
+        }
     }
 
     uint32_t width = rdp.tiles[tile].line_size_bytes * 2;
     uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
     
+    upload_texture(rgba32_buf, width, height, texture);
+}
+
+void import_texture_ia4(int tile, struct Texture* texture) {
+    uint8_t rgba32_buf[32768];
+    
+    for (uint32_t i = 0; i < rdp.texture_load_info[tile].size_bytes * 2; i++) {
+        uint8_t byte = rdp.texture_load_info[tile].addr[i / 2];
+        uint8_t part = (byte >> (4 - (i % 2) * 4)) & 0xf;
+        uint8_t intensity = part >> 1;
+        uint8_t alpha = part & 1;
+        uint8_t r = intensity;
+        uint8_t g = intensity;
+        uint8_t b = intensity;
+        rgba32_buf[4*i + 0] = SCALE_3_8(r);
+        rgba32_buf[4*i + 1] = SCALE_3_8(g);
+        rgba32_buf[4*i + 2] = SCALE_3_8(b);
+        rgba32_buf[4*i + 3] = alpha ? 255 : 0;
+    }
+    
+    uint32_t width = rdp.tiles[tile].line_size_bytes * 2;
+    uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
+    
+    upload_texture(rgba32_buf, width, height, texture);
+}
+
+static void import_texture_ia8(int tile, struct Texture* texture) {
+    uint8_t rgba32_buf[16384];
+    
+    for (uint32_t i = 0; i < rdp.texture_load_info[tile].size_bytes; i++) {
+        uint8_t intensity = rdp.texture_load_info[tile].addr[i] >> 4;
+        uint8_t alpha = rdp.texture_load_info[tile].addr[i] & 0xf;
+        uint8_t r = intensity;
+        uint8_t g = intensity;
+        uint8_t b = intensity;
+        rgba32_buf[4*i + 0] = SCALE_4_8(r);
+        rgba32_buf[4*i + 1] = SCALE_4_8(g);
+        rgba32_buf[4*i + 2] = SCALE_4_8(b);
+        rgba32_buf[4*i + 3] = SCALE_4_8(alpha);
+    }
+    
+    uint32_t width = rdp.tiles[tile].line_size_bytes;
+    uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
+
+    upload_texture(rgba32_buf, width, height, texture);
+}
+
+void import_texture_ci8(int tile, struct Texture* texture) 
+{
+    uint8_t rgba32_buf[16384];
+    
+    for (uint32_t i = 0; i < rdp.texture_load_info[tile].size_bytes; i++) {
+        uint8_t idx = rdp.texture_load_info[tile].addr[i];
+        uint16_t col16 = (rdp.palette[idx * 2] << 8) | rdp.palette[idx * 2 + 1]; // Big endian load
+        uint8_t a = col16 & 1;
+        uint8_t r = col16 >> 11;
+        uint8_t g = (col16 >> 6) & 0x1f;
+        uint8_t b = (col16 >> 1) & 0x1f;
+        rgba32_buf[4*i + 0] = SCALE_5_8(r);
+        rgba32_buf[4*i + 1] = SCALE_5_8(g);
+        rgba32_buf[4*i + 2] = SCALE_5_8(b);
+        rgba32_buf[4*i + 3] = a ? 255 : 0;
+    }
+    
+    uint32_t width = rdp.tiles[tile].line_size_bytes;
+    uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
+
     upload_texture(rgba32_buf, width, height, texture);
 }
 
@@ -517,35 +610,36 @@ struct Texture* import_texture(int tile) {
     return hashmap_get(textureCache.textures, &tex);
 #endif
 
-    //print("import_texture fmt: %d siz: %d\n", fmt, siz);
     if (fmt == G_IM_FMT_RGBA) {
         if (siz == G_IM_SIZ_16b) {
             import_texture_rgba16(tile, &tex);
         } else if (siz == G_IM_SIZ_32b) {
+            print("unhandled import_texture fmt: %d siz: %d\n", fmt, siz);
             //import_texture_rgba32(tile);
         } else {
             //abort();
         }
     } else if (fmt == G_IM_FMT_IA) {
-        /*if (siz == G_IM_SIZ_4b) {
-            import_texture_ia4(tile);
+        if (siz == G_IM_SIZ_4b) {
+            import_texture_ia4(tile, &tex);
         } else if (siz == G_IM_SIZ_8b) {
-            import_texture_ia8(tile);
+            import_texture_ia8(tile, &tex);
         } else if (siz == G_IM_SIZ_16b) {
-            import_texture_ia16(tile);
+            print("unhandled import_texture fmt: %d siz: %d\n", fmt, siz);
+            //import_texture_ia16(tile);
         } else {
-            abort();
-        }*/
+        }
     } else if (fmt == G_IM_FMT_CI) {
         if (siz == G_IM_SIZ_4b) {
             import_texture_ci4(tile, &tex);
         } else if (siz == G_IM_SIZ_8b) {
-            //import_texture_ci8(tile);
+            import_texture_ci8(tile, &tex);
         } else {
             //abort();
         }
     } else if (fmt == G_IM_FMT_I) {
         if (siz == G_IM_SIZ_4b) {
+            print("unhandled import_texture fmt: %d siz: %d\n", fmt, siz);
             //import_texture_i4(tile);
         } else if (siz == G_IM_SIZ_8b) {
             import_texture_i8(tile, &tex);
@@ -822,17 +916,14 @@ void gfx_sp_tri4(uint8_t x1, uint8_t y1, uint8_t z1, uint8_t x2, uint8_t y2, uin
         if (v1 != 0 || v2 != 0 || v3 != 0) {
             struct Vertex* rspVtx[3] = { &rsp.vertices[v1], &rsp.vertices[v2], &rsp.vertices[v3] };
             
-            // TODO: WHY this is needed to dislay something? it seems the z coordinate is larger than w so it's not displaying anything
-            float zScale = 1.0f;
-            
             //print("1 x %f y %f z %f w %f\n", rspVtx[0]->x, rspVtx[0]->y, rspVtx[0]->z, rspVtx[0]->w);
             //print("2 x %f y %f z %f w %f\n", rspVtx[1]->x, rspVtx[1]->y, rspVtx[1]->z, rspVtx[1]->w);
             //print("3 x %f y %f z %f w %f\n\n", rspVtx[2]->x, rspVtx[2]->y, rspVtx[2]->z, rspVtx[2]->w);
 
             struct Vertex vtx[] = { 
-                { rspVtx[0]->r, rspVtx[0]->g, rspVtx[0]->b, rspVtx[0]->a, rspVtx[0]->x, rspVtx[0]->y, rspVtx[0]->z * zScale, rspVtx[0]->w, rspVtx[0]->u, rspVtx[0]->v },
-                { rspVtx[1]->r, rspVtx[1]->g, rspVtx[1]->b, rspVtx[1]->a, rspVtx[1]->x, rspVtx[1]->y, rspVtx[1]->z * zScale, rspVtx[1]->w, rspVtx[1]->u, rspVtx[1]->v }, 
-                { rspVtx[2]->r, rspVtx[2]->g, rspVtx[2]->b, rspVtx[2]->a, rspVtx[2]->x, rspVtx[2]->y, rspVtx[2]->z * zScale, rspVtx[2]->w, rspVtx[2]->u, rspVtx[2]->v },
+                { rspVtx[0]->r, rspVtx[0]->g, rspVtx[0]->b, rspVtx[0]->a, rspVtx[0]->x, rspVtx[0]->y, rspVtx[0]->z, rspVtx[0]->w, rspVtx[0]->u, rspVtx[0]->v },
+                { rspVtx[1]->r, rspVtx[1]->g, rspVtx[1]->b, rspVtx[1]->a, rspVtx[1]->x, rspVtx[1]->y, rspVtx[1]->z, rspVtx[1]->w, rspVtx[1]->u, rspVtx[1]->v }, 
+                { rspVtx[2]->r, rspVtx[2]->g, rspVtx[2]->b, rspVtx[2]->a, rspVtx[2]->x, rspVtx[2]->y, rspVtx[2]->z, rspVtx[2]->w, rspVtx[2]->u, rspVtx[2]->v },
             };
 
             if (texture) {
@@ -1537,8 +1628,26 @@ static void gfx_dp_load_block(uint8_t tile, uint32_t uls, uint32_t ult, uint32_t
     rdp.texture_load_info[rdp.texture_to_load.tile_number].addr = rdp.texture_to_load.addr;
 }
 
-static void gfx_dp_load_tlut(uint8_t tile, uint32_t high_index) {
-    rdp.palette = rdp.texture_to_load.addr;
+static void gfx_dp_load_tlut(uint8_t tile, uint32_t sh, uint32_t th, uint32_t sl, uint32_t tl) 
+{
+    /*
+        For correctly handling the TLUT code, look at ares source code:
+        void n64_rdp::cmd_load_tlut(uint64_t *cmd_buf)
+    */
+	const int32_t count = ((sh >> 2) - (sl >> 2) + 1) << 2;
+
+    //print("gfx_dp_load_tlut tile %x sh %x th %x sl %x tl %x count %x\n", tile, sh, th, sl, tl, count);
+
+    uint32_t width = rdp.tiles[tile].line_size_bytes;
+	int32_t srcstart = ((tl >> 2) * (width << 1) + (sl >> 1)) >> 1;
+    srcstart *= 4;
+
+    //print(" srcstart %x\n", srcstart);
+
+    // The palette is stored:
+    // - directly at this address (then srcstart = 0)
+    // - after the pixels (then srcstart > 0)
+    rdp.palette = rdp.texture_to_load.addr + (srcstart * 2);
 }
 
 void gfx_start()
@@ -1787,7 +1896,12 @@ void gfx_execute_commands(Gfx* gdl, Gfx* gdlEnd)
         }
         else if (opcode == (u8)G_LOADTLUT)
         {
-            gfx_dp_load_tlut(C1(24, 3), C1(14, 10));
+            u32 tile = C1(24, 3);
+            u32 sh = C1(14, 10);
+            u32 th = C1(2, 10);
+            u32 sl = C0(14, 10);
+            u32 tl = C0(2, 10);
+            gfx_dp_load_tlut(tile, sh, th, sl, tl);
         }
         else if (opcode == (u8)G_SETSCISSOR)
         {
