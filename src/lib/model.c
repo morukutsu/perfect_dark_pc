@@ -3197,7 +3197,7 @@ void modelRenderNodeGundl(struct modelrenderdata *renderdata, struct model *mode
 		if (rodata->unk12 == 3 && rodata->xlugdl) {
 			modelApplyRenderModeType3(renderdata, false);
 
-			gSPDisplayList(renderdata->gdl++, rodata->xlugdl);
+			gSPDisplayList(renderdata->gdl++, (uintptr_t)rodata->baseaddr + (uintptr_t)rodata->xlugdl);
 		}
 	}
 
