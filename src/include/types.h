@@ -1765,6 +1765,11 @@ struct keyobj { // objtype 0x04
 	u32 keyflags;
 };
 
+struct keyobj_load { // objtype 0x04
+	struct defaultobj_load base;
+	u32 keyflags;
+};
+
 struct cctvobj { // objtype 0x06
 	struct defaultobj base;
 
@@ -1803,6 +1808,11 @@ struct cctvobj_load { // objtype 0x06
 
 struct ammocrateobj { // objtype 0x07
 	struct defaultobj base;
+	/*0x5c*/ s32 ammotype;
+};
+
+struct ammocrateobj_load { // objtype 0x07
+	struct defaultobj_load base;
 	/*0x5c*/ s32 ammotype;
 };
 
@@ -2001,6 +2011,12 @@ struct shieldobj { // objtype 0x15
 	/*0x60*/ f32 amount;
 };
 
+struct shieldobj_load { // objtype 0x15
+	struct defaultobj_load base;
+	/*0x5c*/ f32 initialamount;
+	/*0x60*/ f32 amount;
+};
+
 struct tag { // objtype 0x16
 	/*0x00*/ u32 identifier; // always 0x00000016
 	/*0x04*/ u16 tagnum;
@@ -2031,6 +2047,13 @@ struct briefingobj { // objtype 0x23
 	u32 type;
 	u32 text;
 	struct briefingobj *next;
+};
+
+struct briefingobj_load { // objtype 0x23
+	u32 unk00;
+	u32 type;
+	u32 text;
+	u32 next;
 };
 
 struct padlockeddoorobj { // objtype 0x26
@@ -2114,6 +2137,15 @@ struct tintedglassobj { // objtype 0x2f
 	/*0x64*/ f32 unk64;
 };
 
+struct tintedglassobj_load { // objtype 0x2f
+	struct defaultobj_load base;
+	/*0x5c*/ s16 xludist;
+	/*0x5e*/ s16 opadist;
+	/*0x60*/ s16 opacity;
+	/*0x62*/ s16 portalnum;
+	/*0x64*/ f32 unk64;
+};
+
 struct liftobj { // objtype 0x30
 	struct defaultobj base;
 	/*0x5c*/ s16 pads[4];
@@ -2148,6 +2180,14 @@ struct linksceneryobj { // objtype 0x31
 	struct defaultobj *unexp;
 	struct defaultobj *exp;
 	struct linksceneryobj *next;
+};
+
+struct linksceneryobj_load { // objtype 0x31
+	u32 unk00;
+	u32 trigger;
+	u32 unexp;
+	u32 exp;
+	u32 next;
 };
 
 struct blockedpathobj { // objtype 0x32
@@ -2212,6 +2252,16 @@ struct fanobj { // objtype 0x36
 	/*0x70*/ s8 on;
 };
 
+struct fanobj_load { // objtype 0x36
+	struct defaultobj_load base;
+	/*0x5c*/ f32 yrot;
+	/*0x60*/ f32 yrotprev;
+	/*0x64*/ f32 ymaxspeed;
+	/*0x68*/ f32 yspeed;
+	/*0x6c*/ f32 yaccel;
+	/*0x70*/ s8 on;
+};
+
 struct hovercarobj { // objtype 0x37
 	struct defaultobj base;
 	/*0x5c*/ u8 *ailist;
@@ -2227,6 +2277,28 @@ struct hovercarobj { // objtype 0x37
 	/*0x80*/ f32 rotx;
 	/*0x84*/ f32 rotz;
 	/*0x88*/ struct path *path;
+	/*0x8c*/ s32 nextstep;
+	/*0x90*/ s16 status;
+	/*0x92*/ s16 dead;
+	/*0x94*/ s16 deadtimer60;
+	/*0x96*/ s16 sparkstimer60;
+};
+
+struct hovercarobj_load { // objtype 0x37
+	struct defaultobj_load base;
+	/*0x5c*/ u32 ailist;
+	/*0x60*/ u16 aioffset;
+	/*0x62*/ s16 aireturnlist;
+	/*0x64*/ f32 speed;
+	/*0x68*/ f32 speedaim;
+	/*0x6c*/ f32 speedtime60;
+	/*0x70*/ f32 turnyspeed60;
+	/*0x74*/ f32 turnxspeed60;
+	/*0x78*/ f32 turnrot60;
+	/*0x7c*/ f32 roty;
+	/*0x80*/ f32 rotx;
+	/*0x84*/ f32 rotz;
+	/*0x88*/ u32 path;
 	/*0x8c*/ s32 nextstep;
 	/*0x90*/ s16 status;
 	/*0x92*/ s16 dead;
@@ -5101,6 +5173,19 @@ struct textoverride {
 	/*0x1c*/ u32 pickuptext;     // eg. "Picked up medlab 2 key card.\n"
 	/*0x20*/ struct textoverride *next;
 	/*0x24*/ struct defaultobj *obj;
+};
+
+struct textoverride_load {
+	/*0x00*/ u32 unk00;
+	/*0x04*/ s32 objoffset;
+	/*0x08*/ s32 weapon;
+	/*0x0c*/ u32 obtaintext;     // eg. "Obtain medlab 2 keycard\n"
+	/*0x10*/ u32 ownertext;      // eg. "Guard's\n"
+	/*0x14*/ u32 inventorytext;  // eg. "Medlab 2 key card\n"
+	/*0x18*/ u32 inventory2text; // eg. "Medlab 2 key card\n"
+	/*0x1c*/ u32 pickuptext;     // eg. "Picked up medlab 2 key card.\n"
+	/*0x20*/ u32 next;
+	/*0x24*/ u32 obj;
 };
 
 struct pakdata {

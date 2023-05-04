@@ -1604,6 +1604,8 @@ void setupLoadFiles(s32 stagenum)
 						dst.doortype = swap_uint16(src->doortype);
 						dst.keyflags = swap_uint32(src->keyflags);
 						dst.autoclosetime = swap_int32(src->autoclosetime);
+
+						// Converting fields after this, probably not necessary
 						dst.frac = swap_f32(src->frac);
 						dst.fracspeed = swap_f32(src->fracspeed);
 						dst.mode = (src->mode);
@@ -1614,6 +1616,7 @@ void setupLoadFiles(s32 stagenum)
 						dst.startpos = src->startpos;
 						swap_coord(&dst.startpos);
 						// no need to set mtx98
+						// Note: src->sibling can be 0xffffffff and interpreted as -1, use swap int32 here
 						dst.sibling = (struct doorobj*)(uintptr_t)swap_int32(src->sibling);
 						dst.lastopen60 = swap_int32(src->lastopen60);
 						dst.portalnum = swap_int16(src->portalnum);
@@ -1701,8 +1704,8 @@ void setupLoadFiles(s32 stagenum)
 					case OBJTYPE_LINKLIFTDOOR: {
 						struct linkliftdoorobj_load* src = (struct linkliftdoorobj_load*)(obj);
 						struct linkliftdoorobj dst;
-						//dst.unk00 = swap_uint32(src->unk00);
-						dst.unk00 = (src->unk00);
+
+						dst.unk00 = src->unk00;
 						dst.door = (struct prop *)(uintptr_t)swap_uint32(src->door);
 						dst.lift = (struct prop *)(uintptr_t)swap_uint32(src->lift);
 						dst.next = (struct linkliftdoorobj *)(uintptr_t)swap_uint32(src->next);
@@ -1734,8 +1737,7 @@ void setupLoadFiles(s32 stagenum)
 						struct criteria_holograph* src = (struct criteria_holograph*)(obj);
 						struct criteria_holograph dst;
 
-						//dst.unk00 = swap_uint32(src->unk00);
-						dst.unk00 = (src->unk00);
+						dst.unk00 = src->unk00;
 						dst.obj = swap_uint32(src->obj);
 						dst.status = swap_uint32(src->status);
 						//struct criteria_holograph *next;
@@ -1909,6 +1911,246 @@ void setupLoadFiles(s32 stagenum)
 						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
 						memcpy(writePtr, &dst, sizeof(struct autogunobj));
 						fileWriteOffset += sizeof(struct autogunobj);
+						break;
+					}
+
+					case OBJTYPE_FAN: {
+						struct fanobj_load* src = (struct fanobj_load*)(obj);
+						struct fanobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.yrot = swap_f32(src->yrot);
+						dst.yrotprev = swap_f32(src->yrotprev);
+						dst.ymaxspeed = swap_f32(src->ymaxspeed);
+						dst.yspeed = swap_f32(src->yspeed);
+						dst.yaccel = swap_f32(src->yaccel);
+						dst.on = src->on;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct fanobj));
+						fileWriteOffset += sizeof(struct fanobj);
+						break;
+					}
+
+					case OBJTYPE_SHIELD: {
+						struct shieldobj_load* src = (struct shieldobj_load*)(obj);
+						struct shieldobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.initialamount = swap_f32(src->initialamount);
+						dst.amount = swap_f32(src->amount);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct shieldobj));
+						fileWriteOffset += sizeof(struct shieldobj);
+						break;
+					}
+
+					case OBJTYPE_TINTEDGLASS: {
+						struct tintedglassobj_load* src = (struct tintedglassobj_load*)(obj);
+						struct tintedglassobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.xludist = swap_int16(src->xludist);
+						dst.opadist = swap_int16(src->opadist);
+						dst.opacity = swap_int16(src->opacity);
+						dst.portalnum = swap_int16(src->portalnum);
+						dst.unk64 = swap_f32(src->unk64);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct tintedglassobj));
+						fileWriteOffset += sizeof(struct tintedglassobj);
+						break;
+					}
+					
+					case OBJTYPE_LINKGUNS: {
+						struct linkgunsobj* src = (struct linkgunsobj*)(obj);
+						struct linkgunsobj dst;
+
+						dst.unk00 = src->unk00;
+						dst.offset1 = swap_int16(src->offset1);
+						dst.offset2 = swap_int16(src->offset2);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct linkgunsobj));
+						fileWriteOffset += sizeof(struct linkgunsobj);
+						break;
+					}
+
+					case OBJTYPE_HOVERCAR: {
+						struct hovercarobj_load* src = (struct hovercarobj_load*)(obj);
+						struct hovercarobj dst;
+						convertDefaultobj(&dst.base, obj);
+
+						dst.ailist = (u8*)(uintptr_t)swap_uint32(src->ailist);
+						dst.aioffset = swap_uint16(src->aioffset);
+						dst.aireturnlist = swap_int16(src->aireturnlist);
+						dst.speed = swap_f32(src->speed);
+						dst.speedaim = swap_f32(src->speedaim);
+						dst.speedtime60 = swap_f32(src->speedtime60);
+						dst.turnyspeed60 = swap_f32(src->turnyspeed60);
+						dst.turnxspeed60 = swap_f32(src->turnxspeed60);
+						dst.turnrot60 = swap_f32(src->turnrot60);
+						dst.roty = swap_f32(src->roty);
+						dst.rotx = swap_f32(src->rotx);
+						dst.rotz = swap_f32(src->rotz);
+						dst.path = (struct path *)(uintptr_t)swap_uint32(src->path);
+						dst.nextstep = swap_int32(src->nextstep);
+						dst.status = swap_int16(src->status);
+						dst.dead = swap_int16(src->dead);
+						dst.deadtimer60 = swap_int16(src->deadtimer60);
+						dst.sparkstimer60 = swap_int16(src->sparkstimer60);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct hovercarobj));
+						fileWriteOffset += sizeof(struct hovercarobj);
+						break;
+					}
+
+					case OBJTYPE_CONDITIONALSCENERY: {
+						struct linksceneryobj_load* src = (struct linksceneryobj_load*)(obj);
+						struct linksceneryobj dst;
+
+						// Note: do not swap unk00, it's already in the right order because it's the first fields of defaultobj
+						// not a single u32
+						dst.unk00 = src->unk00;
+						dst.trigger = (struct defaultobj *)(uintptr_t)swap_uint32(src->trigger);
+						dst.unexp = (struct defaultobj *)(uintptr_t)swap_uint32(src->unexp);
+						dst.exp = (struct defaultobj *)(uintptr_t)swap_uint32(src->exp);
+						dst.next = (struct linksceneryobj *)(uintptr_t)swap_uint32(src->next);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct linksceneryobj));
+						fileWriteOffset += sizeof(struct linksceneryobj);
+						break;
+					}
+
+					case OBJTYPE_BRIEFING: {
+						struct briefingobj_load* src = (struct briefingobj_load*)(obj);
+						struct briefingobj dst;
+
+						dst.unk00 = src->unk00;
+						dst.type = swap_uint32(src->type);
+						dst.text = swap_uint32(src->text);
+						dst.next = (struct briefingobj*)(uintptr_t)swap_uint32(src->next);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct briefingobj));
+						fileWriteOffset += sizeof(struct briefingobj);
+						break;
+					}
+
+					case OBJTYPE_RENAMEOBJ: {
+						struct textoverride_load* src = (struct textoverride_load*)(obj);
+						struct textoverride dst;
+
+						dst.unk00 = src->unk00;
+						dst.objoffset = swap_int32(src->objoffset);
+						dst.weapon = swap_int32(src->weapon);
+						dst.obtaintext = swap_uint32(src->obtaintext);
+						dst.ownertext = swap_uint32(src->ownertext);
+						dst.inventorytext = swap_uint32(src->inventorytext);
+						dst.inventory2text = swap_uint32(src->inventory2text);
+						dst.pickuptext = swap_uint32(src->pickuptext);
+						dst.next = (struct textoverride *)(uintptr_t)swap_uint32(src->next);
+						dst.obj = (struct defaultobj *)(uintptr_t)swap_uint32(src->obj);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct textoverride));
+						fileWriteOffset += sizeof(struct textoverride);
+						break;
+					}
+
+					case OBJTYPE_KEY: {
+						struct keyobj_load* src = (struct keyobj_load*)(obj);
+						struct keyobj dst;
+						convertDefaultobj(&dst.base, obj);
+						dst.keyflags = swap_uint32(src->keyflags);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct keyobj));
+						fileWriteOffset += sizeof(struct keyobj);
+						break;
+					}
+
+					case OBJTYPE_AMMOCRATE: {
+						struct ammocrateobj_load* src = (struct ammocrateobj_load*)(obj);
+						struct ammocrateobj dst;
+						convertDefaultobj(&dst.base, obj);
+						dst.ammotype = swap_int32(src->ammotype);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct ammocrateobj));
+						fileWriteOffset += sizeof(struct ammocrateobj);
+						break;
+					}
+
+					case OBJTYPE_CAMERAPOS: {
+						struct cameraposobj* src = (struct cameraposobj*)(obj);
+						struct cameraposobj dst;
+
+						dst.type = swap_uint32(src->type);
+						dst.x = swap_f32(src->x);
+						dst.y = swap_f32(src->y);
+						dst.z = swap_f32(src->z);
+						dst.theta = swap_f32(src->theta);
+						dst.verta = swap_f32(src->verta);
+						dst.pad = swap_int32(src->pad);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct cameraposobj));
+						fileWriteOffset += sizeof(struct cameraposobj);
+						break;
+					}
+
+					case OBJTYPE_BEGINOBJECTIVE: {
+						struct objective* src = (struct objective*)(obj);
+						struct objective dst;
+						
+						dst.unk00 = src->unk00;
+						dst.index = swap_int32(src->index);
+						dst.text = swap_uint32(src->text);
+						dst.unk0c = swap_uint16(src->unk0c);
+						dst.flags = src->flags;
+						dst.difficulties = src->difficulties;
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(struct objective));
+						fileWriteOffset += sizeof(struct objective);
+						break;
+					}
+
+					case OBJECTIVETYPE_COMPFLAGS:
+					case OBJECTIVETYPE_FAILFLAGS:
+					case OBJECTIVETYPE_COLLECTOBJ: {
+						/*
+							0x00: type
+							0x04: flag
+						*/
+						u32* src = (struct u32*)(obj);
+						u32 dst[2];
+
+						dst[0] = src[0];
+						dst[1] = swap_uint32(src[1]);
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(u32) * 2);
+						fileWriteOffset += sizeof(u32) * 2;
+						break;
+					}
+
+					case OBJTYPE_ENDOBJECTIVE: {
+						/*
+							0x00: type
+						*/
+						u32* src = (struct u32*)(obj);
+						u32 dst[1];
+
+						dst[0] = src[0];
+
+						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
+						memcpy(writePtr, &dst, sizeof(u32));
+						fileWriteOffset += sizeof(u32);
 						break;
 					}
 
