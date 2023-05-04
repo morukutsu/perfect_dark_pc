@@ -812,6 +812,22 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 				modeldefOffset += sizeof(struct modelrodata_chrgunfire);
 				break;
 			}
+
+			case MODELNODETYPE_POSITIONHELD: {
+				struct modelrodata_positionheld* rodataSrc = (struct modelrodata_positionheld*)((uintptr_t)modeldef_load - vma + (uintptr_t)node->rodata);
+				struct modelrodata_positionheld* rodataDst = (struct modelrodata_positionheld*)((uintptr_t)modeldef + (uintptr_t)modeldefOffset);
+				
+				rodataDst->pos = rodataSrc->pos;
+				swap_coord(&rodataDst->pos);
+
+				rodataDst->mtxindex = swap_int16(rodataSrc->mtxindex);
+
+				struct modeloffset_pc moff = { (u32)(uintptr_t)node->rodata, modeldefOffset };
+				hashmap_set(rodataOffsetMap, &moff);
+
+				modeldefOffset += sizeof(struct modelrodata_positionheld);
+				break;
+			}
 			
 			default:
 				debugPrint(PC_DBG_FLAG_MODEL, "ERROR: unhandled modelnode type: %x\n", type);
