@@ -343,33 +343,13 @@ struct model_vtx_section {
 };
 
 
-struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg3)
+struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst)
 {
-	struct modeldef *modeldef;
 	struct modeldef_load *modeldef_load;
 	u8* rawBuffer;
 	u32 vtxSectionsCount = 0;
 	struct model_vtx_section vtxSectionsSrc[MODEL_VTX_SECTION_MAX_COUNT];
 	struct model_vtx_section vtxSectionsDst[MODEL_VTX_SECTION_MAX_COUNT];
-
-	g_LoadType = LOADTYPE_MODEL;
-
-	if (dst) {
-		modeldef = fileLoadToAddr(fileid, FILELOADMETHOD_EXTRAMEM, dst, size);
-	} else {
-		modeldef = fileLoadToNew(fileid, FILELOADMETHOD_EXTRAMEM);
-	}
-
-	// Copy the N64 structure to the PC one
-	// This is going to copy more data than the actual file size
-	// Probably does not work with fileLoadToNew?
-	/*
-		TODO use these to copy the right size
-		allocsize = fileGetAllocationSize(filenum);
-		loadedsize = fileGetLoadedSize(filenum);
-	*/
-
-	// TODO: in the future we can cache the result to a file
 
 	u32 allocsize = fileGetAllocationSize(fileid);
 	u32 loadedsize = fileGetLoadedSize(fileid);
@@ -828,6 +808,24 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 				modeldefOffset += sizeof(struct modelrodata_positionheld);
 				break;
 			}
+
+			case MODELNODETYPE_11: {
+				struct modelrodata_type11_load* rodataSrc = (struct modelrodata_type11_load*)((uintptr_t)modeldef_load - vma + (uintptr_t)node->rodata);
+				struct modelrodata_type11* rodataDst = (struct modelrodata_type11*)((uintptr_t)modeldef + (uintptr_t)modeldefOffset);
+				
+				rodataDst->unk00 = swap_uint32(rodataSrc->unk00);
+				rodataDst->unk04 = swap_uint32(rodataSrc->unk04);
+				rodataDst->unk08 = swap_uint32(rodataSrc->unk08);
+				rodataDst->unk0c = swap_uint32(rodataSrc->unk0c);
+				rodataDst->unk10 = swap_uint32(rodataSrc->unk10);
+				rodataDst->unk14 = (void*)(uintptr_t)swap_uint32(rodataSrc->unk14);
+
+				struct modeloffset_pc moff = { (u32)(uintptr_t)node->rodata, modeldefOffset };
+				hashmap_set(rodataOffsetMap, &moff);
+
+				modeldefOffset += sizeof(struct modelrodata_type11);
+				break;
+			}
 			
 			default:
 				debugPrint(PC_DBG_FLAG_MODEL, "ERROR: unhandled modelnode type: %x\n", type);
@@ -974,6 +972,8 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 	}
 	
 	modelPromoteTypeToPointer(modeldef);
+
+
 	
 	//modelPromoteOffsetsToPointers(modeldef, 0x5000000, (uintptr_t) modeldef);
 	modelPromoteOffsetsToPointers(modeldef, 0x0, (uintptr_t) modeldef);
@@ -1101,7 +1101,6 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 		debugPrint(PC_DBG_FLAG_MODEL, "# Larger file, calling fileSetLoadedsize...\n");
 		fileSetLoadedsize(fileid, modeldefOffset);
 	}
-	modeldef0f1a7560(modeldef, fileid, 0x5000000, modeldef, arg3, dst == NULL);
 
 	hashmap_free(offsetMap);
 	hashmap_free(rodataOffsetMap);
@@ -1111,6 +1110,25 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 	hashmap_free(texOffsetMap);
 
 	nativeFree(rawBuffer);
+
+	return modeldef;
+}
+
+struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg3)
+{
+	struct modeldef *modeldef;
+
+	g_LoadType = LOADTYPE_MODEL;
+
+	if (dst) {
+		modeldef = fileLoadToAddr(fileid, FILELOADMETHOD_EXTRAMEM, dst, size);
+	} else {
+		modeldef = fileLoadToNew(fileid, FILELOADMETHOD_EXTRAMEM);
+	}
+
+	modeldef = convertModeldef(modeldef, fileid, dst);
+
+	modeldef0f1a7560(modeldef, fileid, 0x5000000, modeldef, arg3, dst == NULL);
 
 	return modeldef;
 }

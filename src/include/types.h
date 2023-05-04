@@ -555,6 +555,15 @@ struct modelrodata_type11 { // type 0x11
 	void *unk14;
 };
 
+struct modelrodata_type11_load { // type 0x11
+	u32 unk00;
+	u32 unk04;
+	u32 unk08;
+	u32 unk0c;
+	u32 unk10;
+	u32 unk14;
+};
+
 struct modelrodata_toggle { // type 0x12
 	struct modelnode *target;
 	u16 rwdataindex;
@@ -2751,8 +2760,8 @@ struct gunctrl {
 	/*0x15b1*/ u8 gunloadstate;
 	/*0x15b2*/ u16 loadfilenum;
 	/*0x15b4*/ struct modeldef **loadtomodeldef;
-	/*0x15b8*/ u32 *loadmemptr;
-	/*0x15bc*/ u32 *loadmemremaining;
+	/*0x15b8*/ u64 *loadmemptr;
+	/*0x15bc*/ u64 *loadmemremaining;
 	/*0x15c0*/ struct texpool unk15c0;
 	/*0x15d0*/ u32 nexttexturetoload;
 	/*0x15d4*/ struct fileinfo fileinfo;

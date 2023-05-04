@@ -3758,17 +3758,17 @@ void bgunTickGunLoad(void)
 {
 	s32 i;
 	s32 numthistick;
-	u32 remaining;
+	u64 remaining;
 	s32 padding;
-	u32 allocsize;
-	u32 loadsize;
-	u32 ptr;
+	u64 allocsize;
+	u64 loadsize;
+	u64 ptr;
 	struct player *player = g_Vars.currentplayer;
 	struct modeldef *modeldef;
 	struct fileinfo *fileinfo;
 	struct fileinfo *gunfileinfo;
-	s32 newvalue;
-	u32 end;
+	s64 newvalue;
+	u64 end;
 	u32 stack;
 #if VERSION >= VERSION_NTSC_1_0
 	u32 stack2;
@@ -3806,6 +3806,8 @@ void bgunTickGunLoad(void)
 
 		modeldef = fileLoadToAddr(player->gunctrl.loadfilenum, FILELOADMETHOD_EXTRAMEM, (u8 *)ptr, loadsize);
 
+		modeldef = convertModeldef(modeldef, player->gunctrl.loadfilenum, (u8*)ptr);
+
 		// Reserve some space for textures
 		allocsize = fileGetLoadedSize(player->gunctrl.loadfilenum) + 0xe00;
 
@@ -3818,7 +3820,7 @@ void bgunTickGunLoad(void)
 
 		fileinfo = &g_FileInfo[player->gunctrl.loadfilenum];
 		fileinfo->allocsize = allocsize;
-		end = ALIGN16((s32)ptr + allocsize);
+		end = ALIGN16((s64)ptr + allocsize);
 		allocsize = end - ptr;
 		if (1);
 		remaining -= allocsize;
@@ -3828,8 +3830,8 @@ void bgunTickGunLoad(void)
 		texInitPool(&player->gunctrl.unk15c0, (u8 *)end, remaining);
 
 		// Tidy up the model
-		modelPromoteTypeToPointer(modeldef);
-		modelPromoteOffsetsToPointers(modeldef, 0x05000000, (uintptr_t)modeldef);
+		//modelPromoteTypeToPointer(modeldef);
+		//modelPromoteOffsetsToPointers(modeldef, 0x05000000, (uintptr_t)modeldef);
 
 		*player->gunctrl.loadtomodeldef = modeldef;
 
@@ -3902,7 +3904,7 @@ void bgunTickGunLoad(void)
 
 		newvalue = ALIGN64(texGetPoolLeftPos(&player->gunctrl.unk15c0));
 		remaining = *player->gunctrl.loadmemremaining;
-		remaining -= (s32)(newvalue - *player->gunctrl.loadmemptr);
+		remaining -= (s64)(newvalue - *player->gunctrl.loadmemptr);
 
 		*player->gunctrl.loadmemptr = newvalue;
 		*player->gunctrl.loadmemremaining = remaining;
@@ -4051,8 +4053,8 @@ void bgunTickMasterLoad(void)
 									player->gunctrl.gunloadstate = GUNLOADSTATE_MODEL;
 									player->gunctrl.loadfilenum = handfilenum;
 									player->gunctrl.loadtomodeldef = &player->gunctrl.handmodeldef;
-									player->gunctrl.loadmemptr = (u32 *) &player->gunctrl.unk15a0;
-									player->gunctrl.loadmemremaining = (u32 *) &player->gunctrl.unk15a4;
+									player->gunctrl.loadmemptr = (u64 *) &player->gunctrl.unk15a0;
+									player->gunctrl.loadmemremaining = (u64 *) &player->gunctrl.unk15a4;
 								}
 
 								bgunTickGunLoad();
@@ -4079,8 +4081,8 @@ void bgunTickMasterLoad(void)
 							player->gunctrl.gunloadstate = GUNLOADSTATE_MODEL;
 							player->gunctrl.loadfilenum = filenum;
 							player->gunctrl.loadtomodeldef = &player->gunctrl.gunmodeldef;
-							player->gunctrl.loadmemptr = (u32 *) &player->gunctrl.unk15a8;
-							player->gunctrl.loadmemremaining = (u32 *) &player->gunctrl.unk15ac;
+							player->gunctrl.loadmemptr = (u64 *) &player->gunctrl.unk15a8;
+							player->gunctrl.loadmemremaining = (u64 *) &player->gunctrl.unk15ac;
 						}
 
 						bgunTickGunLoad();
@@ -4121,8 +4123,8 @@ void bgunTickMasterLoad(void)
 											player->gunctrl.loadfilenum = filenum;
 											player->gunctrl.gunloadstate = GUNLOADSTATE_MODEL;
 											player->gunctrl.loadtomodeldef = &player->gunctrl.cartmodeldef;
-											player->gunctrl.loadmemptr = (u32 *) &player->gunctrl.unk15a8;
-											player->gunctrl.loadmemremaining = (u32 *) &player->gunctrl.unk15ac;
+											player->gunctrl.loadmemptr = (u64 *) &player->gunctrl.unk15a8;
+											player->gunctrl.loadmemremaining = (u64 *) &player->gunctrl.unk15ac;
 											break;
 										}
 
