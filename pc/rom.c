@@ -29,7 +29,7 @@ void romInit()
         debugPrint(PC_DBG_FLAG_ROM, "    Could not open rom file. Exiting.\n");
         debugPrint(PC_DBG_FLAG_ROM, "    ROM path is hardcoded in rom.c.\n");
 
-        exit(1);
+        fatalExit();
     }
 }
 

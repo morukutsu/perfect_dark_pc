@@ -185,7 +185,7 @@ u32 *setupGetCmdByIndex(s32 wantindex)
 				return cmd;
 			}
 
-			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength((u32*)cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}
@@ -205,7 +205,7 @@ s32 setupGetCmdIndexByTag(struct tag *tag)
 				return cmdindex;
 			}
 
-			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength((u32*)cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}
@@ -225,7 +225,7 @@ u32 setupGetCmdIndexByProp(struct prop *prop)
 				return cmdindex;
 			}
 
-			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength(cmd) * sizeof(u32)));
+			cmd = (struct defaultobj*)((uintptr_t)cmd + (uintptr_t)(setupGetCmdLength((u32*)cmd) * sizeof(u32)));
 			cmdindex++;
 		}
 	}

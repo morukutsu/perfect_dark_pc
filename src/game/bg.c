@@ -1889,7 +1889,7 @@ void bgReset(s32 stagenum)
 
 	var8007fc0c = 8;
 
-	print("bgReset: %x\n", stagenum);
+	debugPrint(PC_DBG_FLAG_BG, "bgReset: %x\n", stagenum);
 
 #if VERSION >= VERSION_NTSC_1_0
 	if (IS4MB()) {
@@ -2413,7 +2413,7 @@ void bgBuildTables(s32 stagenum)
 		for (r = 1; r < g_Vars.roomcount; r++) {
 			g_Rooms[r].gfxdatalen = ALIGN16(swap_uint16(*datalenptr) * 0x10 + 0x100);
 
-			print("room: %x gfxdatalen: %x\n", r, g_Rooms[r].gfxdatalen);
+			debugPrint(PC_DBG_FLAG_BG, "room: %x gfxdatalen: %x\n", r, g_Rooms[r].gfxdatalen);
 			datalenptr++;
 		}
 
@@ -4392,9 +4392,9 @@ void bgLoadRoom(s32 roomnum)
 			return;
 		}
 
-		print("roomnum: %x readlen: %x fileoffset: %x size: %x\n", roomnum, readlen, fileoffset, size);
-		print("allocation: %llx\n", allocation);
-		print("g_BgRooms[roomnum].unk00: %x\n", g_BgRooms[roomnum].unk00);
+		debugPrint(PC_DBG_FLAG_BG, "roomnum: %x readlen: %x fileoffset: %x size: %x\n", roomnum, readlen, fileoffset, size);
+		debugPrint(PC_DBG_FLAG_BG, "allocation: %llx\n", allocation);
+		debugPrint(PC_DBG_FLAG_BG, "g_BgRooms[roomnum].unk00: %x\n", g_BgRooms[roomnum].unk00);
 
 		// Load the compressed data buffer in the temporary buffer
 		temporaryCompressedDataBuffer = nativeMalloc(readlen);
@@ -4441,27 +4441,27 @@ void bgLoadRoom(s32 roomnum)
 				struct roomgfxdata_load* src = (struct roomgfxdata_load*)srcBuffer;
 				struct roomgfxdata* dst = (struct roomgfxdata*)((uintptr_t)g_Rooms[roomnum].gfxdata + fileWriteOffset);
 				
-				dst->vertices = swap_uint32(src->vertices);
-				dst->colours = swap_uint32(src->colours);
-				dst->opablocks = swap_uint32(src->opablocks);
-				dst->xlublocks = swap_uint32(src->xlublocks);
+				dst->vertices = (struct gfxvtx*)(uintptr_t)swap_uint32(src->vertices);
+				dst->colours = (u32*)(uintptr_t)swap_uint32(src->colours);
+				dst->opablocks = (struct roomblock *)(uintptr_t)swap_uint32(src->opablocks);
+				dst->xlublocks = (struct roomblock *)(uintptr_t)swap_uint32(src->xlublocks);
 				dst->lightsindex = swap_int16(src->lightsindex);
 				dst->numlights = swap_int16(src->numlights);
 				// dst->numvertices = swap_int16(src->numvertices);
 				// dst->numcolours = swap_int16(src->numcolours);
 				// Then convert blocks
 
-				print("roomgfxdata | inflated len: %x\n", inflatedlen);
-				print("- unk00 offset? %x\n", g_BgRooms[roomnum].unk00);
+				debugPrint(PC_DBG_FLAG_BG, "roomgfxdata | inflated len: %x\n", inflatedlen);
+				debugPrint(PC_DBG_FLAG_BG, "- unk00 offset? %x\n", g_BgRooms[roomnum].unk00);
 
-				print("- vertices: %x\n", (u32)dst->vertices);
-				print("- colours: %x\n", (u32)dst->colours);
-				print("- opablocks: %x\n", (u32)dst->opablocks);
-				print("- xlublocks: %x\n", (u32)dst->xlublocks);
-				print("- lightsindex: %x\n", dst->lightsindex);
-				print("- numlights: %x\n", dst->numlights);
-				print("- numvertices: %x\n", dst->numvertices);
-				print("- numcolours: %x\n", dst->numcolours);
+				debugPrint(PC_DBG_FLAG_BG, "- vertices: %x\n", dst->vertices);
+				debugPrint(PC_DBG_FLAG_BG, "- colours: %x\n", dst->colours);
+				debugPrint(PC_DBG_FLAG_BG, "- opablocks: %x\n", dst->opablocks);
+				debugPrint(PC_DBG_FLAG_BG, "- xlublocks: %x\n", dst->xlublocks);
+				debugPrint(PC_DBG_FLAG_BG, "- lightsindex: %x\n", dst->lightsindex);
+				debugPrint(PC_DBG_FLAG_BG, "- numlights: %x\n", dst->numlights);
+				debugPrint(PC_DBG_FLAG_BG, "- numvertices: %x\n", dst->numvertices);
+				debugPrint(PC_DBG_FLAG_BG, "- numcolours: %x\n", dst->numcolours);
 
 				fileWriteOffset += sizeof(struct roomgfxdata) - sizeof(struct roomblock);
 			}
@@ -4483,44 +4483,44 @@ void bgLoadRoom(s32 roomnum)
 				while ((src + 1) <= srcBlockEnd)
 				{
 					dst->type = src->type;
-					dst->next = swap_uint32(src->next);
+					dst->next = (struct roomblock*)(uintptr_t)swap_uint32(src->next);
 
 					if (dst->type == 0)
 					{
-						dst->gdl = swap_uint32(src->gdl);
-						dst->vertices = swap_uint32(src->vertices);
-						dst->colours = swap_uint32(src->colours);
+						dst->gdl = (Gfx *)(uintptr_t)swap_uint32(src->gdl);
+						dst->vertices = (struct gfxvtx*)(uintptr_t)swap_uint32(src->vertices);
+						dst->colours = (u32*)(uintptr_t)swap_uint32(src->colours);
 					}
 					else if (dst->type == 1) 
 					{
-						dst->child = swap_uint32(src->child);
-						dst->unk0c = swap_uint32(src->unk0c);
+						dst->child = (struct roomblock*)(uintptr_t)swap_uint32(src->child);
+						dst->unk0c = (struct coord*)(uintptr_t)swap_uint32(src->unk0c);
 					}
 					
-					print("block: %d\n", blockCount);
-					print("- src->type: %x\n", dst->type);
-					print("- src->next: %x\n", dst->next);
+					debugPrint(PC_DBG_FLAG_BG, "block: %d\n", blockCount);
+					debugPrint(PC_DBG_FLAG_BG, "- src->type: %x\n", dst->type);
+					debugPrint(PC_DBG_FLAG_BG, "- src->next: %x\n", dst->next);
 
 					if (dst->type == ROOMBLOCKTYPE_LEAF)
 					{
-						print("- src->gdl: %x\n", dst->gdl);
-						print("- src->vertices: %x\n", dst->vertices);
-						print("- src->colours: %x\n", dst->colours);
+						debugPrint(PC_DBG_FLAG_BG, "- src->gdl: %x\n", dst->gdl);
+						debugPrint(PC_DBG_FLAG_BG, "- src->vertices: %x\n", dst->vertices);
+						debugPrint(PC_DBG_FLAG_BG, "- src->colours: %x\n", dst->colours);
 					}
 					else if (dst->type == ROOMBLOCKTYPE_PARENT)
 					{
-						print("- src->child: %x\n", dst->child);
-						print("- src->unk0c: %x\n", dst->unk0c);
+						debugPrint(PC_DBG_FLAG_BG, "- src->child: %x\n", dst->child);
+						debugPrint(PC_DBG_FLAG_BG, "- src->unk0c: %x\n", dst->unk0c);
 					}
 
-					print("sizeof(struct roomblock_load): %x\n", sizeof(struct roomblock_load));
+					debugPrint(PC_DBG_FLAG_BG, "sizeof(struct roomblock_load): %x\n", sizeof(struct roomblock_load));
 
 					// Here we need to map old block addresses to new block addresses
 					u32 newBlockOffset = fileWriteOffset;
 					u32 oldBlockOffset = (u32)((uintptr_t)src - (uintptr_t)srcBlockStart + g_BgRooms[roomnum].unk00 + sizeof(struct roomgfxdata_load) - sizeof(struct roomblock_load));
 					addOffsetGlobal(oldBlockOffset, newBlockOffset, 0);
 
-					print("new block offset: %x old block offset: %x\n", newBlockOffset, oldBlockOffset);
+					debugPrint(PC_DBG_FLAG_BG, "new block offset: %x old block offset: %x\n", newBlockOffset, oldBlockOffset);
 					lastBlockOldOffset = oldBlockOffset;
 
 					if (dst->type == ROOMBLOCKTYPE_PARENT)
@@ -4561,17 +4561,17 @@ void bgLoadRoom(s32 roomnum)
 			// The original file has some data between the last block and the vertices
 			// Copy the raw data, don't convert endianness yet
 			{
-				print("space between vertices %x and last block %x : %x\n", g_Rooms[roomnum].gfxdata->vertices, lastBlockOldOffset, (u32)g_Rooms[roomnum].gfxdata->vertices - (u32)(lastBlockOldOffset + sizeof(struct roomblock_load)));
+				debugPrint(PC_DBG_FLAG_BG, "space between vertices %x and last block %x : %x\n", g_Rooms[roomnum].gfxdata->vertices, lastBlockOldOffset, (u32)(uintptr_t)g_Rooms[roomnum].gfxdata->vertices - (u32)(lastBlockOldOffset + sizeof(struct roomblock_load)));
 				u8* src = (u8*)((uintptr_t)srcBuffer + (u32)(lastBlockOldOffset + sizeof(struct roomblock_load)) - (uintptr_t)g_BgRooms[roomnum].unk00);
 				u8* dst = (u8*)((uintptr_t)g_Rooms[roomnum].gfxdata + fileWriteOffset);
-				u32 len = (u32)g_Rooms[roomnum].gfxdata->vertices - (u32)(lastBlockOldOffset + sizeof(struct roomblock_load));
+				u32 len = (u32)(uintptr_t)g_Rooms[roomnum].gfxdata->vertices - (u32)(lastBlockOldOffset + sizeof(struct roomblock_load));
 
 				for (u32 i = 0; i < len; i++) {
 					dst[i] = src[i];
 					fileWriteOffset += 1;
-					print("%02x ", src[i]);
+					debugPrint(PC_DBG_FLAG_BG, "%02x ", src[i]);
 				}
-				print("\n");
+				debugPrint(PC_DBG_FLAG_BG, "\n");
 			}
 
 			u32 SRC_ROOMBLOCKS_END = (u32)(lastBlockOldOffset + sizeof(struct roomblock_load));
@@ -4580,7 +4580,7 @@ void bgLoadRoom(s32 roomnum)
 			VERTICES_START_OFFSET = fileWriteOffset;
 			{
 				g_Rooms[roomnum].gfxdata->numvertices = ((uintptr_t)g_Rooms[roomnum].gfxdata->colours - (uintptr_t)g_Rooms[roomnum].gfxdata->vertices) / sizeof(struct gfxvtx);
-				print("numvertices: %x\n", g_Rooms[roomnum].gfxdata->numvertices);
+				debugPrint(PC_DBG_FLAG_BG, "numvertices: %x\n", g_Rooms[roomnum].gfxdata->numvertices);
 
 				struct gfxvtx* src = (struct gfxvtx*)((uintptr_t)srcBuffer + (uintptr_t)g_Rooms[roomnum].gfxdata->vertices - (uintptr_t)g_BgRooms[roomnum].unk00);
 				struct gfxvtx* dst = (struct gfxvtx*)((uintptr_t)g_Rooms[roomnum].gfxdata + fileWriteOffset);
@@ -4611,10 +4611,10 @@ void bgLoadRoom(s32 roomnum)
 				struct roomblock* end = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + ROOMBLOCKS_END_OFFSET);
 				while (start < end)
 				{
-					u32 next = start->next;
+					u32 next = (u32)(uintptr_t)start->next;
 					if (next != 0) 
 					{
-						u32 new = replaceOffsetGlobal(next);
+						u32 new = (u32)(uintptr_t)replaceOffsetGlobal(next);
 						start->next = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)new);
 					}
 
@@ -4622,13 +4622,13 @@ void bgLoadRoom(s32 roomnum)
 					{
 						u32 new;
 
-						new = replaceOffsetGlobal(start->child);
+						new = (u32)(uintptr_t)replaceOffsetGlobal((u32)(uintptr_t)start->child);
 						start->child = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)new);
 
 						// Ajdust unk0c to point into the buffer between the last block and the vertices
 						u32 offset = (u32)(uintptr_t)start->unk0c - SRC_ROOMBLOCKS_END;
 
-						print("unkOc: %x offset: %x\n", start->unk0c, offset);
+						debugPrint(PC_DBG_FLAG_BG, "unkOc: %x offset: %x\n", start->unk0c, offset);
 
 						start->unk0c = (struct coord*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)ROOMBLOCKS_END_OFFSET + (uintptr_t)offset);
 					}
@@ -4637,21 +4637,21 @@ void bgLoadRoom(s32 roomnum)
 					{
 						// Recalculate offsets for vertices and colors relative to the current file
 						u32 vtxOffset = VERTICES_START_OFFSET + (u32)((uintptr_t)start->vertices - (uintptr_t)g_Rooms[roomnum].gfxdata->vertices);
-						start->vertices = (struct gfxvtx*)vtxOffset;
+						start->vertices = (struct gfxvtx*)(uintptr_t)vtxOffset;
 
 						u32 colOffset = COLORS_START_OFFSET + (u32)((uintptr_t)start->colours - (uintptr_t)g_Rooms[roomnum].gfxdata->colours);
-						start->colours = (struct gfxvtx*)colOffset;
+						start->colours = (u32*)(uintptr_t)colOffset;
 					}
 
 					start++;
 				}
 
 				if (g_Rooms[roomnum].gfxdata->opablocks) {
-					g_Rooms[roomnum].gfxdata->opablocks = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)replaceOffsetGlobal(g_Rooms[roomnum].gfxdata->opablocks));
+					g_Rooms[roomnum].gfxdata->opablocks = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)replaceOffsetGlobal((u32)(uintptr_t)g_Rooms[roomnum].gfxdata->opablocks));
 				}
 
 				if (g_Rooms[roomnum].gfxdata->xlublocks) {
-					g_Rooms[roomnum].gfxdata->xlublocks = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)replaceOffsetGlobal(g_Rooms[roomnum].gfxdata->xlublocks));
+					g_Rooms[roomnum].gfxdata->xlublocks = (struct roomblock*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)replaceOffsetGlobal((u32)(uintptr_t)g_Rooms[roomnum].gfxdata->xlublocks));
 				}
 			}
 
@@ -4660,7 +4660,7 @@ void bgLoadRoom(s32 roomnum)
 
 			{
 				g_Rooms[roomnum].gfxdata->numcolours = ((uintptr_t)roomGetNextGdlInLayer(roomnum, 0, VTXBATCHTYPE_OPA | VTXBATCHTYPE_XLU) - (uintptr_t)g_Rooms[roomnum].gfxdata->colours) / sizeof(u32);
-				print("numcolours: %x\n", g_Rooms[roomnum].gfxdata->numcolours);
+				debugPrint(PC_DBG_FLAG_BG, "numcolours: %x\n", g_Rooms[roomnum].gfxdata->numcolours);
 
 				u32* src = (u32*)((uintptr_t)srcBuffer + (uintptr_t)g_Rooms[roomnum].gfxdata->colours - (uintptr_t)g_BgRooms[roomnum].unk00);
 				u32* dst = (u32*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)fileWriteOffset);
@@ -4677,13 +4677,13 @@ void bgLoadRoom(s32 roomnum)
 
 			{
 				// Find the size of GDLs
-				u32 v0 = (u8 *) roomGetNextGdlInLayer(roomnum, NULL, VTXBATCHTYPE_OPA | VTXBATCHTYPE_XLU);
+				u32 v0 = (u32)(uintptr_t)(u8*)roomGetNextGdlInLayer(roomnum, NULL, VTXBATCHTYPE_OPA | VTXBATCHTYPE_XLU);
 				firstGdl = v0;
 
 				u32 endGdl = g_BgRooms[roomnum].unk00 + inflatedlen;
 				u32 gdlSize = (endGdl - firstGdl) / sizeof(u32);
 
-				print("GDLs: [%x:%x]\n", firstGdl, endGdl);
+				debugPrint(PC_DBG_FLAG_BG, "GDLs: [%x:%x]\n", firstGdl, endGdl);
 				u32* src = (u32*)((uintptr_t)srcBuffer + (uintptr_t)firstGdl - (uintptr_t)g_BgRooms[roomnum].unk00);
 				u32* dst = (u32*)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)fileWriteOffset);
 				for (u32 i = 0; i < gdlSize; i++)
@@ -4701,12 +4701,12 @@ void bgLoadRoom(s32 roomnum)
 		// Promote offsets to pointers in the gfxdata header
 		if (g_Rooms[roomnum].gfxdata->vertices) {
 			//g_Rooms[roomnum].gfxdata->vertices = (struct gfxvtx *)((uintptr_t)g_Rooms[roomnum].gfxdata->vertices - g_BgRooms[roomnum].unk00 + (uintptr_t)allocation);
-			g_Rooms[roomnum].gfxdata->vertices = (struct gfxvtx *)((uintptr_t)g_Rooms[roomnum].gfxdata + VERTICES_START_OFFSET);
+			g_Rooms[roomnum].gfxdata->vertices = (struct gfxvtx*)((uintptr_t)g_Rooms[roomnum].gfxdata + VERTICES_START_OFFSET);
 		}
 
 		if (g_Rooms[roomnum].gfxdata->colours) {
 			//g_Rooms[roomnum].gfxdata->colours = (u32 *)((uintptr_t)g_Rooms[roomnum].gfxdata->colours - g_BgRooms[roomnum].unk00 + (uintptr_t)allocation);
-			g_Rooms[roomnum].gfxdata->colours = (struct gfxvtx *)((uintptr_t)g_Rooms[roomnum].gfxdata + COLORS_START_OFFSET);
+			g_Rooms[roomnum].gfxdata->colours = (u32*)((uintptr_t)g_Rooms[roomnum].gfxdata + COLORS_START_OFFSET);
 		}
 
 		// Promote offsets to pointers in each gfxdata block
@@ -4720,7 +4720,7 @@ void bgLoadRoom(s32 roomnum)
 					// Calculate offset of this GDL to the first GDL
 					u32 offsetToFirstGdl = (uintptr_t)block1->gdl - (uintptr_t)firstGdl;
 
-					print("BLOCK GDL: %x - offset: %x\n", block1->gdl, offsetToFirstGdl);
+					debugPrint(PC_DBG_FLAG_BG, "BLOCK GDL: %x - offset: %x\n", block1->gdl, offsetToFirstGdl);
 					block1->gdl = (Gfx *)((uintptr_t)g_Rooms[roomnum].gfxdata + (uintptr_t)GDLS_START_OFFSET + (uintptr_t)offsetToFirstGdl);
 				}
 				if (1 /*block1->vertices != 0*/) {
@@ -6166,6 +6166,11 @@ bool bgTestHitInVtxBatch(struct coord *arg0, struct coord *arg1, struct coord *a
 												texturenum = -1;
 											} else {
 												s32 tmp = tmpgdl->words.w1 - 8;
+												// Note PC: cannot deref a 32bit pointer there, need to implement a custom solution to retrieve the pointer in the GDL
+												// like querying the extradata at this GDL position?
+												print("unhandled feature\n");
+												fatalExit();
+
 												texturenum = *(s16 *) PHYS_TO_K0(tmp);
 											}
 

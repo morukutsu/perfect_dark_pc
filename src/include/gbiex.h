@@ -23,8 +23,8 @@
 	_g->words.w0 = (_SHIFTL(G_VTX, 24, 8)            \
 			| _SHIFTL((count), 16, 8)                \
 			| _SHIFTL((size), 0, 16));               \
-	_g->words.w1 = (unsigned int)(ptr);              \
-	gAddr_addon(_g, ptr, __FILE__, __LINE__);        \
+	_g->words.w1 = (unsigned int)((uintptr_t)ptr);              \
+	gAddr_addon(_g, ((void*)(uintptr_t)ptr), __FILE__, __LINE__);        \
 }
 
 #define	gDPSetVerticeArray(pkt, ptr, numvertices) \
@@ -48,8 +48,8 @@
 	_g->words.w0 = (_SHIFTL(G_SETCOLOR, 24, 8)       \
 			| _SHIFTL(((numcolors) - 1) << 2, 16, 8) \
 			| _SHIFTL((numcolors) * 4, 0, 16));      \
-	_g->words.w1 = (unsigned int)(ptr);              \
-	gAddr_addon(_g, ptr, __FILE__, __LINE__);        \
+	_g->words.w1 = (unsigned int)((uintptr_t)ptr);              \
+	gAddr_addon(_g, ((void*)(uintptr_t)ptr), __FILE__, __LINE__);        \
 }
 
 /**

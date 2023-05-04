@@ -1976,8 +1976,8 @@ typedef union {
 									\
 	_g->words.w0 = (_SHIFTL((c), 24, 8) | _SHIFTL((p), 16, 8) |	\
 			_SHIFTL((l), 0, 16));				\
-	_g->words.w1 = (unsigned int)(s);				\
-	gDma1p_addon(_g, c, s, l, p, __FILE__, __LINE__);												\
+	_g->words.w1 = (unsigned int)(uintptr_t)(s);				\
+	gDma1p_addon(_g, c, (void*)(uintptr_t)s, l, p, __FILE__, __LINE__);												\
 }
 
 #define	gsDma1p(c, s, l, p)						\
@@ -2141,8 +2141,8 @@ typedef union {
 									\
 	_g->words.w0 = (_SHIFTL((c), 24, 8)  | _SHIFTL((p0), 8, 16) |	\
 			_SHIFTL((p1), 0, 8));				\
-	_g->words.w1 = (unsigned int) (dat);				\
-	gAddr_addon(_g, dat, __FILE__, __LINE__);					\
+	_g->words.w1 = (unsigned int) ((uintptr_t)dat);				\
+	gAddr_addon(_g, ((void*)(uintptr_t)dat), __FILE__, __LINE__);					\
 }
 
 #define	gsImmp21(c, p0, p1, dat)					\
@@ -3261,7 +3261,7 @@ typedef union {
 	_g->words.w0 = _SHIFTL(cmd, 24, 8) | _SHIFTL(fmt, 21, 3) |	\
 		       _SHIFTL(siz, 19, 2) | _SHIFTL((width)-1, 0, 12);	\
 	_g->words.w1 = (unsigned int)(i);				\
-	gAddr_addon(_g, i, __FILE__, __LINE__);					\
+	gAddr_addon(_g, ((void*)(uintptr_t)(i)), __FILE__, __LINE__);					\
 }
 
 #define	gsSetImage(cmd, fmt, siz, width, i)				\

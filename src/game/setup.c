@@ -24,6 +24,7 @@
 #include "game/mplayer/mplayer.h"
 #include "game/pad.h"
 #include "game/propobj.h"
+#include "game/chrai.h"
 #include "bss.h"
 #include "lib/args.h"
 #include "lib/memp.h"
@@ -36,7 +37,6 @@
 #include "lib/collision.h"
 #include "data.h"
 #include "types.h"
-
 #include "print.h"
 #include "byteswap.h"
 #include "gfx/hashmap.h"
@@ -1242,7 +1242,7 @@ void setupLoadBriefing(s32 stagenum, u8 *buffer, s32 bufferlen, struct briefing 
 
 		langLoadToAddr(briefing->langbank, langbuffer, langbufferlen);
 
-		start = (struct defaultobj *)((uintptr_t)setup + (u32)setup->props);
+		start = (struct defaultobj *)((uintptr_t)setup + (uintptr_t)setup->props);
 
 		if (start != NULL) {
 			struct defaultobj *obj;
@@ -1413,14 +1413,14 @@ void convertDefaultobj(struct defaultobj* dst, struct defaultobj_load* src)
 	dst->flags = swap_uint32(src->flags);
 	dst->flags2 = swap_uint32(src->flags2);
 	dst->flags3 = swap_uint32(src->flags3);
-	dst->prop = (struct prop*)swap_uint32(src->prop);
-	dst->model = (struct model*)swap_uint32(src->model);
+	dst->prop = (struct prop*)(uintptr_t)swap_uint32(src->prop);
+	dst->model = (struct model*)(uintptr_t)swap_uint32(src->model);
 	for (u32 i = 0; i < 3; i++)
 		for (u32 j = 0; j < 3; j++)
 			dst->realrot[i][j] = swap_f32(src->realrot[i][j]);
 	dst->hidden = swap_uint32(src->hidden);
-	dst->geotilef = (struct geotilef*)swap_uint32(src->geotilef);
-	dst->projectile = (struct projectile*)swap_uint32(src->projectile);
+	dst->geotilef = (struct geotilef*)(uintptr_t)swap_uint32(src->geotilef);
+	dst->projectile = (struct projectile*)(uintptr_t)swap_uint32(src->projectile);
 	dst->damage = swap_int16(src->damage);
 	dst->maxdamage = swap_int16(src->maxdamage);
 	for (u32 i = 0; i < 4; i++)
@@ -1433,10 +1433,10 @@ void convertDefaultobj(struct defaultobj* dst, struct defaultobj_load* src)
 
 void convertTvscreenobj(struct tvscreen* dst, struct tvscreen_load* src)
 {
-	dst->cmdlist = swap_uint32(src->cmdlist);
+	dst->cmdlist = (u32*)(uintptr_t)swap_uint32(src->cmdlist);
 	dst->offset = swap_uint16(src->offset);
 	dst->pause60 = swap_int16(src->pause60);
-	dst->tconfig = swap_uint32(src->tconfig);
+	dst->tconfig = (struct textureconfig*)(uintptr_t)swap_uint32(src->tconfig);
 	dst->rot = swap_f32(src->rot);
 	dst->xscale = swap_f32(src->xscale);
 	dst->xscalefrac = swap_f32(src->xscalefrac);
@@ -1646,8 +1646,8 @@ void setupLoadFiles(s32 stagenum)
 						dst.identifier = src->identifier;
 						dst.tagnum = swap_uint16(src->tagnum);
 						dst.cmdoffset = swap_int16(src->cmdoffset);
-						dst.next = swap_uint32(src->next);
-						dst.obj = swap_uint32(src->obj);
+						dst.next = (struct tag*)(uintptr_t)swap_uint32(src->next);
+						dst.obj = (struct defaultobj*)(uintptr_t)swap_uint32(src->obj);
 
 						u8* writePtr = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
 						memcpy(writePtr, &dst, sizeof(struct tag));
@@ -1684,7 +1684,7 @@ void setupLoadFiles(s32 stagenum)
 						convertDefaultobj(&dst.base, obj);
 
 						for (u32 i = 0; i < 4; i++) dst.pads[i] = swap_int16(src->pads[i]);
-						for (u32 i = 0; i < 4; i++) dst.doors[i] = swap_uint32(src->doors[i]);
+						for (u32 i = 0; i < 4; i++) dst.doors[i] = (struct doorobj*)(uintptr_t)swap_uint32(src->doors[i]);
 						dst.dist = swap_f32(src->dist);
 						dst.speed = swap_f32(src->speed);
 						dst.accel = swap_f32(src->accel);
@@ -1901,9 +1901,9 @@ void setupLoadFiles(s32 stagenum)
 						dst.lastseebond60 = swap_int32(src->lastseebond60);
 						dst.lastaimbond60 = swap_int32(src->lastaimbond60);
 						dst.allowsoundframe = swap_int32(src->allowsoundframe);
-						dst.beam = swap_uint32(src->beam);
+						dst.beam = (struct beam*)(uintptr_t)swap_uint32(src->beam);
 						dst.shotbondsum = swap_f32(src->shotbondsum);
-						dst.target = swap_uint32(src->target);
+						dst.target = (struct prop*)(uintptr_t)swap_uint32(src->target);
 						dst.targetteam = src->targetteam;
 						dst.ammoquantity = src->ammoquantity;
 						dst.nextchrtest = swap_int16(src->nextchrtest);
@@ -2127,7 +2127,7 @@ void setupLoadFiles(s32 stagenum)
 							0x00: type
 							0x04: flag
 						*/
-						u32* src = (struct u32*)(obj);
+						u32* src = (u32*)(obj);
 						u32 dst[2];
 
 						dst[0] = src[0];
@@ -2143,7 +2143,7 @@ void setupLoadFiles(s32 stagenum)
 						/*
 							0x00: type
 						*/
-						u32* src = (struct u32*)(obj);
+						u32* src = (u32*)(obj);
 						u32 dst[1];
 
 						dst[0] = src[0];
@@ -2156,7 +2156,7 @@ void setupLoadFiles(s32 stagenum)
 
 					default: {
 						print("Unhandled OBJTYPE: %02x\n", obj->type);
-						exit(1);
+						fatalExit();
 					}
 				}
 
@@ -2207,10 +2207,10 @@ void setupLoadFiles(s32 stagenum)
 			//setupConvertIntroCmd(intro);
 		}
 
-		g_StageSetup.intro = (s32 *)((uintptr_t)setup + (u32)replaceOffsetGlobal(swap_int32(setup_load->intro)));
+		g_StageSetup.intro = (s32*)((uintptr_t)setup + (uintptr_t)replaceOffsetGlobal(swap_int32(setup_load->intro)));
 		print("- g_StageSetup.intro %llx\n", g_StageSetup.intro);
 
-		g_StageSetup.props = (u32 *)((uintptr_t)setup + (u32)replaceOffsetGlobal(objOffset));
+		g_StageSetup.props = (u32*)((uintptr_t)setup + (uintptr_t)replaceOffsetGlobal(objOffset));
 		print("- g_StageSetup.props %llx\n", g_StageSetup.props);
 
 		// Iterate objects again to test if the conversion worked
@@ -2235,10 +2235,10 @@ void setupLoadFiles(s32 stagenum)
 
 			// Parse the list once to copy the path structure
 			struct path_load* srcPathList = (struct path_load*)((uintptr_t)setup_load + pathsOffset);
-			for (u32 i = 0; swap_uint32(srcPathList[i].pads) != NULL; i++) {
+			for (u32 i = 0; swap_uint32(srcPathList[i].pads) != 0; i++) {
 				struct path dst;
 
-				dst.pads = (s32*)swap_uint32(srcPathList[i].pads);
+				dst.pads = (s32*)(uintptr_t)swap_uint32(srcPathList[i].pads);
 				dst.id = srcPathList[i].id;
 				dst.flags = srcPathList[i].flags;
 				dst.len = swap_uint16(srcPathList[i].len);
@@ -2273,7 +2273,7 @@ void setupLoadFiles(s32 stagenum)
 				if (padsLength > 0) 
 				{
 					//addOffsetGlobal(dst.pads, fileWriteOffset, 0);
-					paths[i].pads = fileWriteOffset;
+					paths[i].pads = (s32*)(uintptr_t)fileWriteOffset;
 					//print("pads written at: %x\n", paths[i].pads);
 
 					padsDst[padsLength] = -1;
@@ -2302,7 +2302,7 @@ void setupLoadFiles(s32 stagenum)
 			g_StageSetup.ailists = (struct ailist *)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
 
 			for (u32 i = 0; listSrc[i].list != NULL; i++) {
-				struct ailist ailist = { swap_uint32(listSrc[i].list), swap_uint32(listSrc[i].id) };
+				struct ailist ailist = { (u8*)(uintptr_t)swap_uint32(listSrc[i].list), swap_uint32(listSrc[i].id) };
 				//print("ailist: %x id %x\n", ailist.list, ailist.id);
 				listDst[i] = ailist;
 				fileWriteOffset += sizeof(struct ailist);
@@ -2328,7 +2328,7 @@ void setupLoadFiles(s32 stagenum)
 				u8 *cmd = (u8*)((uintptr_t)setup_load + (uintptr_t)g_StageSetup.ailists[i].list);
 				u8 *cmdDst = (u8*)((uintptr_t)setup + (uintptr_t)fileWriteOffset);
 
-				g_StageSetup.ailists[i].list = fileWriteOffset;
+				g_StageSetup.ailists[i].list = (u8*)(uintptr_t)fileWriteOffset;
 
 				while (true) {
 					s32 type = (cmd[0] << 8) + cmd[1];
@@ -2879,7 +2879,7 @@ void setupCreateProps(s32 stagenum)
 						truck->speedtime60 = -1;
 						truck->turnrot60 = 0;
 						truck->roty = 0;
-						truck->ailist = ailistFindById((u32)truck->ailist);
+						truck->ailist = ailistFindById(truck->ailist);
 						truck->aioffset = 0;
 						truck->aireturnlist = -1;
 						truck->path = NULL;
@@ -2901,7 +2901,7 @@ void setupCreateProps(s32 stagenum)
 						car->roty = 0;
 						car->rotx = 0;
 						car->speedtime60 = -1;
-						car->ailist = ailistFindById((s32)car->ailist);
+						car->ailist = ailistFindById(car->ailist);
 						car->aioffset = 0;
 						car->aireturnlist = -1;
 						car->path = NULL;
@@ -2930,7 +2930,7 @@ void setupCreateProps(s32 stagenum)
 						chopper->gunrotx = 0;
 						chopper->barrelrot = 0;
 						chopper->barrelrotspeed = 0;
-						chopper->ailist = ailistFindById((u32)chopper->ailist);
+						chopper->ailist = ailistFindById(chopper->ailist);
 						chopper->aioffset = 0;
 						chopper->aireturnlist = -1;
 						chopper->path = NULL;
@@ -2977,7 +2977,7 @@ void setupCreateProps(s32 stagenum)
 						heli->yrot = 0;
 						heli->speedtime60 = -1;
 						heli->rotoryspeedtime = -1;
-						heli->ailist = ailistFindById((u32)heli->ailist);
+						heli->ailist = ailistFindById(heli->ailist);
 						heli->aioffset = 0;
 						heli->aireturnlist = -1;
 						heli->path = NULL;
@@ -3166,8 +3166,8 @@ void setupCreateProps(s32 stagenum)
 				case OBJTYPE_LINKLIFTDOOR:
 					{
 						struct linkliftdoorobj *link = (struct linkliftdoorobj *)obj;
-						s32 dooroffset = (s32)link->door;
-						s32 liftoffset = (s32)link->lift;
+						s32 dooroffset = (s32)(uintptr_t)link->door;
+						s32 liftoffset = (s32)(uintptr_t)link->lift;
 						struct defaultobj *door = setupGetObjByCmdIndex(index + dooroffset);
 						struct defaultobj *lift = setupGetObjByCmdIndex(index + liftoffset);
 
@@ -3184,9 +3184,9 @@ void setupCreateProps(s32 stagenum)
 				case OBJTYPE_SAFEITEM:
 					{
 						struct safeitemobj *link = (struct safeitemobj *)obj;
-						s32 itemoffset = (s32)link->item;
-						s32 safeoffset = (s32)link->safe;
-						s32 dooroffset = (s32)link->door;
+						s32 itemoffset = (s32)(uintptr_t)link->item;
+						s32 safeoffset = (s32)(uintptr_t)link->safe;
+						s32 dooroffset = (s32)(uintptr_t)link->door;
 						struct defaultobj *item = setupGetObjByCmdIndex(index + itemoffset);
 						struct defaultobj *safe = setupGetObjByCmdIndex(index + safeoffset);
 						struct defaultobj *door = setupGetObjByCmdIndex(index + dooroffset);
@@ -3208,8 +3208,8 @@ void setupCreateProps(s32 stagenum)
 				case OBJTYPE_PADLOCKEDDOOR:
 					{
 						struct padlockeddoorobj *link = (struct padlockeddoorobj *)obj;
-						s32 dooroffset = (s32)link->door;
-						s32 lockoffset = (s32)link->lock;
+						s32 dooroffset = (s32)(uintptr_t)link->door;
+						s32 lockoffset = (s32)(uintptr_t)link->lock;
 						struct defaultobj *door = setupGetObjByCmdIndex(index + dooroffset);
 						struct defaultobj *lock = setupGetObjByCmdIndex(index + lockoffset);
 
@@ -3227,9 +3227,9 @@ void setupCreateProps(s32 stagenum)
 				case OBJTYPE_CONDITIONALSCENERY:
 					{
 						struct linksceneryobj *link = (struct linksceneryobj *)obj;
-						s32 triggeroffset = (s32)link->trigger;
-						s32 unexpoffset = (s32)link->unexp;
-						s32 expoffset = (s32)link->exp;
+						s32 triggeroffset = (s32)(uintptr_t)link->trigger;
+						s32 unexpoffset = (s32)(uintptr_t)link->unexp;
+						s32 expoffset = (s32)(uintptr_t)link->exp;
 						struct defaultobj *trigger = setupGetObjByCmdIndex(index + triggeroffset);
 						struct defaultobj *unexp = NULL;
 						struct defaultobj *exp = NULL;
@@ -3279,7 +3279,7 @@ void setupCreateProps(s32 stagenum)
 				case OBJTYPE_BLOCKEDPATH:
 					{
 						struct blockedpathobj *blockedpath = (struct blockedpathobj *)obj;
-						s32 objoffset = (s32)blockedpath->blocker;
+						s32 objoffset = (s32)(uintptr_t)blockedpath->blocker;
 						struct defaultobj *blocker = setupGetObjByCmdIndex(index + objoffset);
 
 						if (blocker && blocker->prop) {

@@ -117,7 +117,7 @@ char *argFindByPrefix(s32 occurrence, char *str)
 	s32 i;
 
 	for (i = 1; i < argc; i++) {
-		if (strncmp(str, argv[i], len) == 0) {
+		if (strncmp(str, argv[i], (size_t)len) == 0) {
 			occurrence--;
 
 			if (occurrence == 0) {

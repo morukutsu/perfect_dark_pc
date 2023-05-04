@@ -1,6 +1,12 @@
 #include <ultra64.h>
 #include "lib/fault.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+/*
+
 char *strcpy(char *dst, const char *src)
 {
 	char *ptr = dst;
@@ -27,7 +33,7 @@ char *strcpy(char *dst, const char *src)
 	return dst;
 }
 
-char *strncpy(char *dst, const char *src, s32 len)
+char *strncpy(char *dst, const char *src, size_t len)
 {
 	char *ptr = dst;
 	char c;
@@ -133,6 +139,7 @@ char toupper(char c)
 	return c;
 }
 
+
 s32 isdigit(char c)
 {
 	return c >= '0' && c <= '9';
@@ -147,6 +154,8 @@ s32 isspace(char c)
 {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\v';
 }
+*/
+
 
 s32 strtol(const char *src, const char **endptr, s32 base)
 {

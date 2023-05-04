@@ -47,7 +47,9 @@ char* debugGetFlagName(unsigned int flag)
 		return "TEX";
 	else if (flag & PC_DBG_FLAG_MODEL)
 		return "MODEL";
-	
+	else if (flag & PC_DBG_FLAG_BG)
+		return "BG";
+		
 	return "";
 }
 

@@ -40,14 +40,14 @@ void* replaceOffsetGlobal(u32 old)
     struct offset_pc moff = { old };
 	struct offset_pc* item = hashmap_get(offsets, &moff);
 	if (item) {
-		return item->new;
+		return (void*)(uintptr_t)item->new;
 	} 
 
     print("offsetsmap:replaceOffset() %x\n", old);
     print("offset not found\n");
-    exit(1);
+    fatalExit();
 
     // unreached
-	return old;
+	return (void*)(uintptr_t)old;
 }
 

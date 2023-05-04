@@ -9,6 +9,7 @@
 #define PC_DBG_FLAG_FILE   0x00000008
 #define PC_DBG_FLAG_TEX    0x00000010
 #define PC_DBG_FLAG_MODEL  0x00000020
+#define PC_DBG_FLAG_BG     0x00000040
 
 void print(const char *format, ...);
 void hexdump(void* addr, int len);

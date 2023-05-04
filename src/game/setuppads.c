@@ -210,7 +210,7 @@ void setupPreparePads(void)
 			s32* neighbours = (s32*)((uintptr_t)srcPadsFileRaw + (uintptr_t)waypointsDst->neighbours);
 			s32* neighboursDst = (s32*)((uintptr_t)g_StageSetup.padfiledata + (uintptr_t)fileWriteBuffer);
 
-			waypointsDst->neighbours = fileWriteBuffer;
+			waypointsDst->neighbours = (s32*)(uintptr_t)fileWriteBuffer;
 			while (swap_int32(*neighbours) >= 0) {
 				//print("		- n: %x\n", swap_int32(*neighbours));
 				*neighboursDst = swap_int32(*neighbours);
@@ -235,7 +235,7 @@ void setupPreparePads(void)
 
 		g_StageSetup.waygroups = waygroupsDst;
 
-		while (waygroupsSrc->neighbours != NULL) {
+		while (waygroupsSrc->neighbours != 0) {
 			waygroupsDst->neighbours = (s32*)(uintptr_t)swap_uint32(waygroupsSrc->neighbours);
 			waygroupsDst->waypoints = (s32*)(uintptr_t)swap_uint32(waygroupsSrc->waypoints);
 			waygroupsDst->unk08 = swap_uint32(waygroupsSrc->unk08);
@@ -286,7 +286,7 @@ void setupPreparePads(void)
 			s32* neighboursSrc = (s32*)((uintptr_t)srcPadsFileRaw + (uintptr_t)waygroupsDst->neighbours);
 			s32* neighboursDst = (s32*)((uintptr_t)g_StageSetup.padfiledata + (uintptr_t)fileWriteBuffer);
 
-			waygroupsDst->neighbours = fileWriteBuffer;
+			waygroupsDst->neighbours = (s32*)(uintptr_t)fileWriteBuffer;
 
 			while (swap_int32(*neighboursSrc) >= 0) {
 				//print("		- n: %x\n", swap_int32(*neighboursSrc));

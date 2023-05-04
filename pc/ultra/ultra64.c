@@ -55,7 +55,6 @@ void osContGetQuery(OSContStatus *data)
 
 void osCreateThread(OSThread *, OSId, void (*)(void *), void *, void *, OSPri)
 {
-	printf("stub: osCreateThread()\n");
 }
 
 void osStartThread(OSThread *)
@@ -101,10 +100,10 @@ float cosf(float angle)
 }
 */
 
-float sqrtf(float value)
+/*float sqrtf(float value)
 {
 	return (float)sqrt((double)value);
-}
+}*/
 
 void osInvalDCache(void *, s32)
 {
