@@ -2,6 +2,7 @@
 #include "print.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 unsigned int g_pcDebugFlags = 0;
 

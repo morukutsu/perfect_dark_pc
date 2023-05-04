@@ -49,6 +49,9 @@
 #include "native_functions.h"
 #include "offsetsmap.h"
 
+#include <strings.h>
+#include <string.h>
+
 #define BGCMD_END                               0x00
 #define BGCMD_PUSH                              0x01
 #define BGCMD_POP                               0x02

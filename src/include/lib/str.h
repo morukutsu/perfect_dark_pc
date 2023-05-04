@@ -16,6 +16,6 @@ int isdigit(int c);
 int isalpha(int c);
 int isspace(int c);
 
-s32 strtol(const char *src, const char **endptr, s32 base);
+//s32 strtol(const char *src, const char **endptr, s32 base);
 
 #endif

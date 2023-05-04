@@ -5,6 +5,8 @@
 #include "mp3/mp3.h"
 #include "types.h"
 
+#include <strings.h>
+
 /**
  * These two ABI commands are used in this file, but the format of the data
  * doesn't match the format used by n_audio's ABI.

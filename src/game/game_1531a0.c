@@ -17,6 +17,7 @@
 #include "print.h"
 #include "byteswap.h"
 #include "native_functions.h"
+#include <string.h>
 
 #define SPACE_WIDTH 5
 

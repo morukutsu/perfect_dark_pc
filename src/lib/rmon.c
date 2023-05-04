@@ -7,6 +7,8 @@
 #include "data.h"
 #include "types.h"
 
+#include <stdio.h>
+
 void rmonproc()
 {
 	// empty

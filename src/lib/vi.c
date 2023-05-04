@@ -15,6 +15,8 @@
 #include "data.h"
 #include "types.h"
 
+#include <strings.h>
+
 #define TO_U16_A(x) ((u16)(x))
 #define TO_U16_B(x) ((x) & 0xffff)
 #define TO_U16_C(x) ((u16)((x) & 0xffff))

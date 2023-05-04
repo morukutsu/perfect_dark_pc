@@ -78,11 +78,19 @@
 
 #include "va_list.h"
 #include <stdio.h>
-#include <stdlib.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
 #include "native_functions.h"
+#include <stdlib.h>
+
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+
+#include "cimgui.h"
+#include "cimgui_impl.h"
+
+#undef bool
+#define bool s32
 
 // TODO: for the text editor
 #define VERSION 2
@@ -723,11 +731,33 @@ void pcWindowInit()
 
 	SDL_GL_SetSwapInterval(1);
 
+	igCreateContext(NULL);
+
+	//set docking
+	ImGuiIO* ioptr = igGetIO();
+	ioptr->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+	//ioptr->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+#ifdef IMGUI_HAS_DOCK
+	//ioptr->ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+	//ioptr->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+#endif
+
+	ImGui_ImplSDL2_InitForOpenGL(window, maincontext);
+    const char* glsl_version = "#version 150";
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	igStyleColorsDark(NULL);
+	//ImFontAtlas_AddFontDefault(io.Fonts, NULL);
+
 	gfx_pc_init();
 }
 
 void pcWindowDestroy()
 {
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	igDestroyContext(NULL);
+
     SDL_GL_DeleteContext(maincontext);
 	SDL_DestroyWindow(window);
   	SDL_Quit();
@@ -740,6 +770,8 @@ void sdlDrawBegin()
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) 
 	{ 
+		ImGui_ImplSDL2_ProcessEvent(&event);
+
 		switch(event.type)
 		{
 			case SDL_KEYUP: {
@@ -764,10 +796,26 @@ void sdlDrawBegin()
 	{
 		exit(0);
 	}
+
+	// start imgui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    igNewFrame();
+
+	bool showDemoWindow = true;
+	igShowDemoWindow(&showDemoWindow);
 }
 
 void sdlDrawEnd()
 {
+	ImGuiIO* ioptr = igGetIO();
+
+	igRender();
+    //SDL_GL_MakeCurrent(window, maincontext);
+    //glViewport(0, 0, (int)ioptr->DisplaySize.x, (int)ioptr->DisplaySize.y);
+	ImGui_ImplOpenGL3_RenderDrawData(igGetDrawData());
+	//igUpdatePlatformWindows();
+
 	SDL_GL_SwapWindow(window);
 	SDL_Delay(1);
 }

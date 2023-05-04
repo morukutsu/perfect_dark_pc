@@ -10,8 +10,10 @@
 #include "lib/rzip.h"
 #include "data.h"
 #include "types.h"
+#include "inflate/inflate.h"
 
 #include "print.h"
+#include <strings.h>
 
 struct texture *g_Textures;
 u32 var800aabc4;
@@ -1932,7 +1934,7 @@ s32 texInflateLookupFromBuffer(u8 *src, s32 width, s32 height, u8 *dst, u8 *look
 void texSwapAltRowBytes(u8 *dst, s32 width, s32 height, s32 format)
 {
 	// NOTE: on PC, dont swap rows
-	return 0;
+	return;
 
 	s32 x;
 	s32 y;

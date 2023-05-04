@@ -156,7 +156,7 @@ s32 isspace(char c)
 }
 */
 
-
+/*
 s32 strtol(const char *src, const char **endptr, s32 base)
 {
 	bool negative;
@@ -253,3 +253,4 @@ s32 strtol(const char *src, const char **endptr, s32 base)
 
 	return 0;
 }
+*/

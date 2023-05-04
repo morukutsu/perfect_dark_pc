@@ -2,6 +2,8 @@
 #include <os.h>
 #include <R4300.h>
 
+#include <strings.h>
+
 #define ADPCMFBYTES      9
 #define LFSAMPLES        4
 

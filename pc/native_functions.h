@@ -3,6 +3,6 @@
 
 #define nativeMalloc(n)   __builtin_malloc ((n))
 #define nativeFree(n)     __builtin_free ((n))
-#define memset(a, b, c)   __builtin_memset((a), (b), (c))
+//#define memset(a, b, c)   __builtin_memset((a), (b), (c))
 
 #endif

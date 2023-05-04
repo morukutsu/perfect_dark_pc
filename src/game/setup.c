@@ -37,11 +37,13 @@
 #include "lib/collision.h"
 #include "data.h"
 #include "types.h"
+
 #include "print.h"
 #include "byteswap.h"
 #include "gfx/hashmap.h"
 #include "offsetsmap.h"
 #include "native_functions.h"
+#include <string.h> 
 
 s32 g_SetupCurMpLocation;
 u32 var8009cc34;

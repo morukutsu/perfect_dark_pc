@@ -12,6 +12,8 @@
 #include "data.h"
 #include "types.h"
 
+#include <stdlib.h> 
+
 /**
  * This file handles memory usage for graphics related tasks.
  *

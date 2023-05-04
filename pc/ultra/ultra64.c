@@ -2,7 +2,7 @@
 //#include "osint.h"
 #include "ultra64.h"
 //#include "bss.h"
-#include <math.h>
+//#include <math.h>
 //#include <stdio.h>
 
 extern struct __osThreadTail __osThreadTail;

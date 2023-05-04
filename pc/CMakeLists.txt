@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Tmp: fixup for working on MacOS
-set(CMAKE_C_COMPILER "/opt/homebrew/bin/gcc-12")
-#set(CMAKE_CXX_COMPILER "g++")
+#set(CMAKE_C_COMPILER "/opt/homebrew/bin/gcc-12")
+#set(CMAKE_CXX_COMPILER "/opt/homebrew/bin/g++-12")
 
 project(perfect_dark)
 
@@ -15,10 +15,14 @@ add_compile_definitions(_MIPS_SZLONG=64)
 add_compile_definitions(PIRACYCHECKS=0)
 add_compile_definitions(AVOID_UB)
 
+# MacOS x Clang: adding this to avoid the definition of the function "random" in stdlib.h
+add_compile_definitions(_ANSI_SOURCE)
+
 # PC Port options
 add_compile_definitions(PC_PORT_AUDIO_ENABLED=0)
 
-enable_language(C)
+enable_language(C CXX)
+set (CMAKE_CXX_STANDARD 11)
 
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -400,7 +404,13 @@ set(PDARK_ULTRA_LIB_FILES
 )
 
 set(PDARK_IMGUI_FILES
-    #"imgui/imgui_demo.cpp"
+    "imgui/imgui.cpp"
+    "imgui/imgui_draw.cpp"
+    "imgui/imgui_widgets.cpp"
+    "imgui/imgui_tables.cpp"
+    "imgui/imgui_demo.cpp"
+    "imgui/cimgui.cpp"
+    "imgui/cimgui.h"
 )
 
 message(${CMAKE_SOURCE_DIR})
@@ -419,6 +429,7 @@ add_executable(perfect_dark
     "${PDARK_GAME_FILES}"
     "${PDARK_INFLATE_FILES}"
     "${PDARK_ULTRA_LIB_FILES}"
+    "${PDARK_IMGUI_FILES}"
 )
 
 target_link_libraries(perfect_dark m ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES})
@@ -434,6 +445,10 @@ target_include_directories(perfect_dark PUBLIC
 target_include_directories(perfect_dark PUBLIC
                            "../src/lib/ultra"
                            "../src/lib/ultra/audio"
+                            )
+
+target_include_directories(perfect_dark PUBLIC
+                           "./imgui"
                             )
 
 # Game source files are able to include some files from the PC port

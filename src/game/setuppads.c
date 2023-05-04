@@ -19,6 +19,7 @@
 #include "gfx/hashmap.h"
 #include "offsetsmap.h"
 #include "native_functions.h"
+#include <string.h> 
 
 /**
  * The function assumes that a pad file's data has been loaded from the ROM

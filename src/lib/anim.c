@@ -15,6 +15,7 @@
 
 #include "print.h"
 #include "byteswap.h"
+#include <strings.h>
 
 #define ANIM_HEADER_CACHE_SIZE 40
 #define ANIM_FRAME_CACHE_SIZE  32
