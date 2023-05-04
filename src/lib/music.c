@@ -886,6 +886,9 @@ glabel musicTickEvents
 // The code below uses += 0 to get the mismatch down to one instruction,
 void musicTickEvents(void)
 {
+	// Clear the event queue to avoid some scripts looping indefinitly
+	g_MusicEventQueueLength = 0;
+
 #if PC_PORT_AUDIO_ENABLED
 	s32 i;
 	s32 j;
