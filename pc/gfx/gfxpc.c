@@ -429,6 +429,28 @@ void import_texture_ia4(int tile, struct Texture* texture) {
     upload_texture(rgba32_buf, width, height, texture);
 }
 
+void import_texture_i4(int tile, struct Texture* texture) {
+    uint8_t rgba32_buf[32768];
+
+    for (uint32_t i = 0; i < rdp.texture_load_info[tile].size_bytes * 2; i++) {
+        uint8_t byte = rdp.texture_load_info[tile].addr[i / 2];
+        uint8_t part = (byte >> (4 - (i % 2) * 4)) & 0xf;
+        uint8_t intensity = part;
+        uint8_t r = intensity;
+        uint8_t g = intensity;
+        uint8_t b = intensity;
+        rgba32_buf[4*i + 0] = SCALE_4_8(r);
+        rgba32_buf[4*i + 1] = SCALE_4_8(g);
+        rgba32_buf[4*i + 2] = SCALE_4_8(b);
+        rgba32_buf[4*i + 3] = 255;
+    }
+
+    uint32_t width = rdp.tiles[tile].line_size_bytes * 2;
+    uint32_t height = rdp.texture_load_info[tile].size_bytes / rdp.tiles[tile].line_size_bytes;
+    
+    upload_texture(rgba32_buf, width, height, texture);
+}
+
 static void import_texture_ia8(int tile, struct Texture* texture) {
     uint8_t rgba32_buf[16384];
     
@@ -639,8 +661,7 @@ struct Texture* import_texture(int tile) {
         }
     } else if (fmt == G_IM_FMT_I) {
         if (siz == G_IM_SIZ_4b) {
-            print("unhandled import_texture fmt: %d siz: %d\n", fmt, siz);
-            //import_texture_i4(tile);
+            import_texture_i4(tile, &tex);
         } else if (siz == G_IM_SIZ_8b) {
             import_texture_i8(tile, &tex);
         } else {
