@@ -157,6 +157,7 @@ u32 fill2[1];
 
 Lights1 var80070090 = gdSPDefLights1(0x96, 0x96, 0x96, 0xff, 0xff, 0xff, 0xb2, 0x4d, 0x2e);
 
+// Note PC: maybe needed to reserve more gun mem
 u32 var800700a8 = 0x00025800;
 u32 var800700ac = 0x0001e000;
 
@@ -6354,7 +6355,7 @@ void bgunDisarm(struct prop *attackerprop)
  *
  * With this function stubbed, part of the CMP150 model does not render.
  */
-void bgunExecuteModelCmdList(s32 *ptr)
+void bgunExecuteModelCmdList(u64 *ptr)
 {
 	union modelrwdata *rwdata;
 	struct modelnode *node;
@@ -6411,7 +6412,7 @@ void bgunExecuteModelCmdList(s32 *ptr)
  * iterate the command list to update part visibility rather than iterate the
  * full model tree.
  */
-s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, s32 *ptr)
+s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, u64 *ptr)
 {
 	s32 len = 0;
 	struct modelnode *node = nodearg;
@@ -6428,11 +6429,11 @@ s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, s32 *
 			rwdata->distance.visible = false;
 			node->child = rodata->distance.target;
 			ptr[0] = 0;
-			ptr[1] = (s32)rwdata;
-			ptr[2] = (s32)node;
-			ptr[3] = (s32)rodata->distance.target;
+			ptr[1] = (u64)(uintptr_t)rwdata;
+			ptr[2] = (u64)(uintptr_t)node;
+			ptr[3] = (u64)(uintptr_t)rodata->distance.target;
 			ptr += 4;
-			len += 16;
+			len += 4 * sizeof(u64);
 			break;
 		case MODELNODETYPE_TOGGLE:
 			rodata = node->rodata;
@@ -6440,36 +6441,36 @@ s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, s32 *
 			rwdata->toggle.visible = true;
 			node->child = rodata->toggle.target;
 			ptr[0] = 1;
-			ptr[1] = (s32)rwdata;
-			ptr[2] = (s32)node;
-			ptr[3] = (s32)rodata->toggle.target;
+			ptr[1] = (u64)(uintptr_t)rwdata;
+			ptr[2] = (u64)(uintptr_t)node;
+			ptr[3] = (u64)(uintptr_t)rodata->toggle.target;
 			ptr += 4;
-			len += 16;
+			len += 4 * sizeof(u64);
 			break;
 		case MODELNODETYPE_HEADSPOT:
 			rwdata = modelGetNodeRwData(model, node);
 			rwdata->headspot.headmodeldef = NULL;
 			rwdata->headspot.rwdatas = NULL;
 			ptr[0] = 2;
-			ptr[1] = (s32)rwdata;
+			ptr[1] = (u64)(uintptr_t)rwdata;
 			ptr += 2;
-			len += 8;
+			len += 2 * sizeof(u64);
 			break;
 		case MODELNODETYPE_0B:
 			rwdata = modelGetNodeRwData(model, node);
 			rwdata->type0b.unk00 = 0;
 			ptr[0] = 3;
-			ptr[1] = (s32)rwdata;
+			ptr[1] = (u64)(uintptr_t)rwdata;
 			ptr += 2;
-			len += 8;
+			len += 2 * sizeof(u64);
 			break;
 		case MODELNODETYPE_CHRGUNFIRE:
 			rwdata = modelGetNodeRwData(model, node);
 			rwdata->chrgunfire.visible = false;
 			ptr[0] = 4;
-			ptr[1] = (s32)rwdata;
+			ptr[1] = (u64)(uintptr_t)rwdata;
 			ptr += 2;
-			len += 8;
+			len += 2 * sizeof(u64);
 			break;
 		case MODELNODETYPE_DL:
 			rodata = node->rodata;
@@ -6478,12 +6479,12 @@ s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, s32 *
 			rwdata->dl.gdl = rodata->dl.opagdl;
 			rwdata->dl.colours = (void *)ALIGN8((uintptr_t)&rodata->dl.vertices[rodata->dl.numvertices]);
 			ptr[0] = 5;
-			ptr[1] = (s32)rwdata;
-			ptr[2] = (s32)rwdata->dl.vertices;
-			ptr[3] = (s32)rwdata->dl.gdl;
-			ptr[4] = (s32)rwdata->dl.colours;
+			ptr[1] = (u64)(uintptr_t)rwdata;
+			ptr[2] = (u64)(uintptr_t)rwdata->dl.vertices;
+			ptr[3] = (u64)(uintptr_t)rwdata->dl.gdl;
+			ptr[4] = (u64)(uintptr_t)rwdata->dl.colours;
 			ptr += 5;
-			len += 20;
+			len += 5 * sizeof(u64);
 			break;
 		}
 
@@ -6507,7 +6508,7 @@ s32 bgunCreateModelCmdList(struct model *model, struct modelnode *nodearg, s32 *
 	}
 
 	*ptr = 6;
-	len += 4;
+	len += sizeof(u64);
 
 	return len;
 }
