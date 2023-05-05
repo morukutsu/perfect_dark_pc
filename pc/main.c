@@ -805,7 +805,11 @@ void pdDebugMenu()
 					tint_col.z = border_col.z = 1;
 					tint_col.w = border_col.w = 1;
 
-					igImage(tex->texture, size, uv0, uv1, tint_col, border_col);
+					// Skip some textures in the debugger...
+					if (tex->width != 640) 
+					{
+						igImage(tex->texture, size, uv0, uv1, tint_col, border_col);
+					}
 					igEndGroup();
 					
 
