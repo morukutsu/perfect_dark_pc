@@ -83,6 +83,7 @@
 #include <SDL_opengl.h>
 #include "native_functions.h"
 #include <stdlib.h>
+#include "debugvars.h"
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 
@@ -763,6 +764,64 @@ void pcWindowDestroy()
   	SDL_Quit();
 }
 
+void pdDebugMenu()
+{
+	{
+		igBegin("Debug", NULL, 0);
+		
+		igText("Speed");
+		if (igRadioButton_Bool("Paused", pdDbgSpeed == 0)) { pdDbgSpeed = 0; } igSameLine(0, 0);
+		if (igRadioButton_Bool("Normal", pdDbgSpeed == 1)) { pdDbgSpeed = 1; } igSameLine(0, 0);
+		if (igRadioButton_Bool("Fast", pdDbgSpeed == 2)) { pdDbgSpeed = 2; } igSameLine(0, 0);
+		if (igRadioButton_Bool("Super", pdDbgSpeed == 4)) { pdDbgSpeed = 4; }
+
+		if (igBeginTabBar("##Textures", ImGuiTabBarFlags_None))
+		{
+			bool open = true;
+			if (igBeginTabItem("Textures", &open, ImGuiTabItemFlags_None))
+			{
+				size_t iter = 0;
+				void* item;
+
+				while (debug_iter_texture_cache(&iter, &item))
+				{
+					igBeginGroup();
+					struct Texture* tex = (struct Texture*)item;
+					igText("tex %llx", tex->addr);
+					igText("w %d h %d fmt %d size %d", tex->width, tex->height, tex->fmt, tex->siz);
+
+					ImVec2 size, uv0, uv1;
+					size.x = tex->width;
+					size.y = tex->height;
+
+					uv0.x = 0;
+					uv0.y = 0;
+					uv1.x = 1;
+					uv1.y = 1;
+
+					ImVec4 tint_col, border_col;
+					tint_col.x = border_col.x = 1;
+					tint_col.y = border_col.y = 1;
+					tint_col.z = border_col.z = 1;
+					tint_col.w = border_col.w = 1;
+
+					igImage(tex->texture, size, uv0, uv1, tint_col, border_col);
+					igEndGroup();
+					igSameLine(0, 0);
+
+					if (iter != 0 && iter % 4 == 0) igNewLine();
+				}
+
+				igEndTabItem();
+			}
+
+			igEndTabBar();
+		}
+
+		igEnd();
+    }
+}
+
 void sdlDrawBegin()
 {
 	int mustQuit = false;
@@ -802,8 +861,7 @@ void sdlDrawBegin()
     ImGui_ImplSDL2_NewFrame();
     igNewFrame();
 
-	bool showDemoWindow = true;
-	igShowDemoWindow(&showDemoWindow);
+	pdDebugMenu();
 }
 
 void sdlDrawEnd()

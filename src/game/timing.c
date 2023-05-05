@@ -5,6 +5,8 @@
 #include "data.h"
 #include "types.h"
 
+#include "debugvars.h"
+
 void frametimeInit(void)
 {
 	g_Vars.thisframestartt = osGetCount();
@@ -54,7 +56,9 @@ void frametimeCalculate(void)
 	// Note PC: this is blocking on PC at the moment because of missing stubs
 	// TODO FIX
 	//frametimeApply(CYCLES_PER_FRAME, CYCLES_PER_FRAME * 4, 0);
-	frametimeApply(1, 1, 0);
+	
+	//frametimeApply(1, 1, 0);
+	frametimeApply(pdDbgSpeed, pdDbgSpeed, 0);
 }
 
 void func0f16cf8c(s32 arg0)

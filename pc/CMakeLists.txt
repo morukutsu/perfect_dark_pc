@@ -14,6 +14,8 @@ add_compile_definitions(ROM_SIZE=32)
 add_compile_definitions(_MIPS_SZLONG=64)
 add_compile_definitions(PIRACYCHECKS=0)
 add_compile_definitions(AVOID_UB)
+add_definitions("-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS=1")
+add_definitions("-DIMGUI_IMPL_API=extern \"C\" ")
 
 # MacOS x Clang: adding this to avoid the definition of the function "random" in stdlib.h
 add_compile_definitions(_ANSI_SOURCE)
@@ -379,6 +381,7 @@ set(PDARK_PC_FILES
     "print.c"
     "byteswap.c"
     "offsetsmap.c"
+    "debugvars.c"
 
     "gfx/gfxpc.c"
     "gfx/hashmap.c"
@@ -411,6 +414,8 @@ set(PDARK_IMGUI_FILES
     "imgui/imgui_demo.cpp"
     "imgui/cimgui.cpp"
     "imgui/cimgui.h"
+    "imgui/backends/imgui_impl_opengl3.cpp"
+    "imgui/backends/imgui_impl_sdl2.cpp"
 )
 
 message(${CMAKE_SOURCE_DIR})
@@ -431,6 +436,8 @@ add_executable(perfect_dark
     "${PDARK_ULTRA_LIB_FILES}"
     "${PDARK_IMGUI_FILES}"
 )
+
+target_compile_definitions(perfect_dark PUBLIC -DCIMGUI_USE_OPENGL3 -DCIMGUI_USE_SDL2)
 
 target_link_libraries(perfect_dark m ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES})
 

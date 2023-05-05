@@ -141,16 +141,6 @@ struct TextureCache {
     struct hashmap* textures;
 };
 
-struct Texture {
-    // Hashed fields
-    void* addr;
-    uint32_t fmt, siz;
-
-    // Non hashed fields
-    uint32_t width, height;
-    GLuint texture;
-};
-
 struct TextureCache textureCache;
 
 uint64_t texture_hash(const void *item, uint64_t seed0, uint64_t seed1) {
@@ -616,7 +606,7 @@ struct Texture* import_texture(int tile) {
     
     // Check if the texture is in the cache
     // For now we use addr and tile parameters. Could be safer to hash the pixels
-    struct Texture tex = {rdp.texture_load_info[tile].addr, fmt, siz };
+    struct Texture tex = { rdp.texture_load_info[tile].addr, fmt, siz };
     void* item = hashmap_get(textureCache.textures, &tex);
     if (item) {
         //print("Found texture %llx %d %d\n", tex.addr, tex.fmt, tex.siz);
@@ -1771,6 +1761,11 @@ void debug_opcode(Gfx* gdl, int opcodeCount)
     if (ext) {
         debugPrint(PC_DBG_FLAG_GFX, "( %s : %d )\n", ext->file, ext->line);
     }
+}
+
+void* debug_iter_texture_cache(size_t* iter, void** item)
+{
+    return hashmap_iter(textureCache.textures, iter, item);
 }
 
 void gfx_execute_commands(Gfx* gdl, Gfx* gdlEnd)
