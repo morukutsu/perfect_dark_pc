@@ -562,8 +562,11 @@ void import_texture_rgba16(int tile, struct Texture* texture)
     gfx_get_texture_size(tile, &ww, &hh);
     uint32_t size_bytes = ww * hh * 2;
 
+    uint16_t* pixels = (uint16_t*)rdp.texture_load_info[tile].addr;
+
     for (uint32_t i = 0; i < size_bytes / 2; i++) {
-        uint16_t col16 = (rdp.texture_load_info[tile].addr[2 * i] << 8) | rdp.texture_load_info[tile].addr[2 * i + 1];
+        uint16_t col16 = swap_uint16(pixels[i]);
+        
         uint8_t a = col16 & 1;
         uint8_t r = col16 >> 11;
         uint8_t g = (col16 >> 6) & 0x1f;

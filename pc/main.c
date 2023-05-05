@@ -807,9 +807,10 @@ void pdDebugMenu()
 
 					igImage(tex->texture, size, uv0, uv1, tint_col, border_col);
 					igEndGroup();
-					igSameLine(0, 0);
+					
 
 					if (iter != 0 && iter % 4 == 0) igNewLine();
+					else igSameLine(0, 2);
 				}
 
 				igEndTabItem();

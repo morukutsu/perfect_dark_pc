@@ -17,7 +17,6 @@ There are many tasks to do, here are some ideas if you would like to collaborate
 
 - No sound emulation
 - No joypad/keyboard/mouse input
-- Integrate imgui for easier debugging controls
 - Fix warnings (mostly related to bad pointers <-> int casts)
 - Update the CMake project and source to support builds on Windows and Linux
 

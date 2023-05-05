@@ -1995,6 +1995,67 @@ void texSwapAltRowBytes(u8 *dst, s32 width, s32 height, s32 format)
 	}
 }
 
+void texSwapAltRowBytes2(u8 *dst, s32 width, s32 height, s32 format)
+{
+	s32 x;
+	s32 y;
+	s32 alignedwidth;
+	u32 *row = (u32 *)dst;
+	s32 tmp;
+
+	switch (format) {
+	case TEXFORMAT_RGBA32:
+	case TEXFORMAT_RGB24:
+		alignedwidth = (width + 3) & 0xffc;
+		break;
+	case TEXFORMAT_RGBA16:
+	case TEXFORMAT_RGB15:
+	case TEXFORMAT_IA16:
+		alignedwidth = ((width + 3) & 0xffc) >> 1;
+		break;
+	case TEXFORMAT_IA8:
+	case TEXFORMAT_I8:
+	case TEXFORMAT_RGBA16_CI8:
+	case TEXFORMAT_IA16_CI8:
+		alignedwidth = ((width + 7) & 0xff8) >> 2;
+		break;
+	case TEXFORMAT_IA4:
+	case TEXFORMAT_I4:
+	case TEXFORMAT_RGBA16_CI4:
+	case TEXFORMAT_IA16_CI4:
+		alignedwidth = ((width + 0xf) & 0xff0) >> 3;
+		break;
+	}
+
+	row += alignedwidth;
+
+	if (format == TEXFORMAT_RGBA32 || format == TEXFORMAT_RGB24) {
+		for (y = 1; y < height; y += 2) {
+			for (x = 0; x < alignedwidth; x += 4) {
+				tmp = row[x + 0];
+				row[x + 0] = row[x + 2];
+				row[x + 2] = tmp;
+
+				tmp = row[x + 1];
+				row[x + 1] = row[x + 3];
+				row[x + 3] = tmp;
+			}
+
+			row += alignedwidth * 2;
+		}
+	} else {
+		for (y = 1; y < height; y += 2) {
+			for (x = 0; x < alignedwidth; x += 2) {
+				tmp = row[x + 0];
+				row[x + 0] = row[x + 1];
+				row[x + 1] = tmp;
+			}
+
+			row += alignedwidth * 2;
+		}
+	}
+}
+
 /**
  * Blur the pixels in the image with the surrounding pixels.
  */

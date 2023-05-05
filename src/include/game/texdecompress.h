@@ -26,6 +26,7 @@ s32 texChannelsToPixels(u8 *src, s32 width, s32 height, u8 *dst, s32 format);
 s32 texInflateLookup(s32 width, s32 height, u8 *dst, u8 *lookup, s32 numcolours, s32 format);
 s32 texInflateLookupFromBuffer(u8 *src, s32 width, s32 height, u8 *dst, u8 *lookup, s32 numcolours, s32 format);
 void texSwapAltRowBytes(u8 *arg0, s32 width, s32 height, s32 format);
+void texSwapAltRowBytes2(u8 *arg0, s32 width, s32 height, s32 format);
 void texBlur(u8 *pixels, s32 width, s32 height, s32 method, s32 chansize);
 void texInitPool(struct texpool *pool, u8 *start, s32 len);
 struct tex *texFindInPool(s32 texturenum, struct texpool *pool);

@@ -329,7 +329,7 @@ void* replaceOffset(struct hashmap* map, u32 old)
 		// For now, ignore replacements for DL COL2 segment addrs
 		if (old != 0 && old != 0x6000000) {
 			debugPrint(PC_DBG_FLAG_MODEL, "ERROR, offset not found: %x\n", old);
-			fatalExit(1);
+			fatalExit();
 		}
 	}
 
@@ -829,7 +829,7 @@ struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst)
 			
 			default:
 				debugPrint(PC_DBG_FLAG_MODEL, "ERROR: unhandled modelnode type: %x\n", type);
-				fatalExit(1);
+				fatalExit();
 				break;
 		}
 	}
@@ -948,16 +948,63 @@ struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst)
 				len = tex->width * tex->height;
 			} else {
 				debugPrint(PC_DBG_FLAG_MODEL, "[ERROR] Unhandled texture format in modeldef, implement %x.\n", tex->depth);
-				fatalExit(1);
+				fatalExit();
 			}
 
-			memcpy((void*)((uintptr_t)modeldef + (uintptr_t)modeldefOffset), textureAddr, len);
+			void* textureDst = (void*)((uintptr_t)modeldef + (uintptr_t)modeldefOffset);
+			memcpy(textureDst, textureAddr, len);
+			
+			/*
+				Embedded texture are ready to be passed to the GPU so their rows are already swizzled
+				Swizzle them back to normal
+			*/
+			s32 format = 0;
+			if (tex->format == G_IM_FMT_RGBA && tex->depth == G_IM_SIZ_16b)
+				format = TEXFORMAT_RGBA16;
+			else if (tex->format == G_IM_FMT_IA && tex->depth == G_IM_SIZ_16b)
+				format = TEXFORMAT_IA16;
+			else if (tex->format == G_IM_FMT_RGBA && tex->depth == G_IM_SIZ_32b)
+				format = TEXFORMAT_RGBA32;
+			else if (tex->format == G_IM_FMT_RGBA && tex->depth == G_IM_SIZ_8b)
+				format = TEXFORMAT_RGBA16_CI8;
+			else if (tex->format == G_IM_FMT_IA && tex->depth == G_IM_SIZ_8b)
+				format = TEXFORMAT_IA8;
+			else if (tex->format == G_IM_FMT_CI && tex->depth == G_IM_SIZ_8b)
+				format = TEXFORMAT_IA16_CI8;
+			else if (tex->format == G_IM_FMT_I && tex->depth == G_IM_SIZ_8b)
+				format = TEXFORMAT_I8;
+			else if (tex->format == G_IM_FMT_RGBA && tex->depth == G_IM_SIZ_4b)
+				format = TEXFORMAT_RGBA16_CI4;
+			else if (tex->format == G_IM_FMT_IA && tex->depth == G_IM_SIZ_4b)
+				format = TEXFORMAT_IA4;
+			else if (tex->format == G_IM_FMT_CI && tex->depth == G_IM_SIZ_4b)
+				format = TEXFORMAT_IA16_CI4;
+			else if (tex->format == G_IM_FMT_I && tex->depth == G_IM_SIZ_4b)
+				format = TEXFORMAT_I4;
+
+			/*
+			#define TEXFORMAT_RGBA32     0x00 // 32-bit RGBA (8/8/8/8)
+			#define TEXFORMAT_RGBA16     0x01 // 16-bit RGBA (5/5/5/1)
+			#define TEXFORMAT_RGB24      0x02 // 24-bit RGB (8/8/8)
+			#define TEXFORMAT_RGB15      0x03 // 15-bit RGB (5/5/5)
+			#define TEXFORMAT_IA16       0x04 // 16-bit grayscale+alpha
+			#define TEXFORMAT_IA8        0x05 // 8-bit grayscale+alpha (4/4)
+			#define TEXFORMAT_IA4        0x06 // 4-bit grayscale+alpha (3/1)
+			#define TEXFORMAT_I8         0x07 // 8-bit grayscale
+			#define TEXFORMAT_I4         0x08 // 4-bit grayscale
+			#define TEXFORMAT_RGBA16_CI8 0x09 // 16-bit 5551 paletted colour with 8-bit palette indexes
+			#define TEXFORMAT_RGBA16_CI4 0x0a // 16-bit 5551 paletted colour with 4-bit palette indexes
+			#define TEXFORMAT_IA16_CI8   0x0b // 16-bit 88 paletted greyscale+alpha with 8-bit palette indexes
+			#define TEXFORMAT_IA16_CI4   0x0c // 16-bit 88 paletted greyscale+alpha with 4-bit palette indexes
+			*/
+
+			texSwapAltRowBytes2(textureDst, tex->width, tex->height, format);
+
 			tex->texturenum = modeldefOffset;
 
 			// Put the vma offset in the texturenum offset
 			// texLoad will detect it and know this texture is already loaded in RAM
 			tex->texturenum = modeldefOffset | vma;
-			//void* textureAddr2 = (void*)((uintptr_t)modeldef - vma + (uintptr_t)tex->texturenum);
 
 			debugPrint(PC_DBG_FLAG_MODEL, "old embedded texture offset %x new offset %x\n", oldTextureOffset, modeldefOffset);
 
@@ -1038,7 +1085,7 @@ struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst)
 
 						if (j == vtxSectionsCount - 1) {
 							debugPrint(PC_DBG_FLAG_MODEL, "[ERROR] Vtx offset not found %x\n", offset);
-							fatalExit(1);
+							fatalExit();
 						}
 					}
 				} 
