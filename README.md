@@ -5,20 +5,28 @@ This project is extremely WIP and there are plenty of things left to be done to 
 
 ## Status
 
-- Loads the initial parts of the game (legal, logos and some parts of the CI)
-- GPU implementation is incomplete: lighting is not implemented, many textures formats are missing, etc...
-- Compiles with a lot of warnings, expect crashes
-- At the moment, do not expect to build it smoothly, this is only for collaborating on the development
+- Loads the initial parts of the game (logos, intro, CI)
+- GPU implementation is incomplete: lighting is not yet implemented, some textures formats are missing, and more
+- Compiles with a lot of warnings
+- Crashes
+- At the moment, do not expect a smooth experience, this is only for collaborating on the development
 - The only part of the game displayed accurately is the legal menu
+- If you want to play PD in HD & 60fps, please use an emulator or modded rom, or the XBLA port!
 
 ## TODO
 
-There are many tasks to do, here are some ideas if you would like to collaborate:
+Here are some ideas to collaborate:
 
-- No sound emulation
-- No joypad/keyboard/mouse input
+- Fix crashes: the game often crashes because the logic is impacted by files being loaded wrongly, missing features in stubs, wrong pointer to int conversions.
+- Fix bugs: bugs that don't crash the game like entities displayed at the wrong position, or not displayed at all
+- Audio emulation (SFX, MP3s, musics)
+- Inputs: Joypad/Keyboard and Mouse, including deeper integration for mouse aiming
 - Fix warnings (mostly related to bad pointers <-> int casts)
 - Update the CMake project and source to support builds on Windows and Linux
+- Improve debug tools: add features to the debug menu to inspect game variables, find bugs
+- Renderer: there are a lot of work in progress parts in the renderer, it might not be easy to split work here. But some easy tasks could be to add support for larger rendering resolutions, wide screen, fixes to improve accuracy. The goal of the renderer to not to be fast but to be "accurate". Not accurate as an emulator, but to have a rendering which is faithful to the original game. The only optimisation in the renderer at the moment is the texture cache. The next one will probably be triangles batching. I expect the game to be fast enough rendering with an ubershader, but not sure.
+- Online: if you like true challenges, think about a plan for implementing online (using sync input sharing with delay/rollback, or go deeper into the game)
+- Assets conversion: convert all game assets in advance (when the game first starts) and cache them to a file, instead of converting them on the fly when they are loaded from the ROM
 
 ## Requirements
 
