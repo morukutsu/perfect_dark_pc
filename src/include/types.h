@@ -1,7 +1,7 @@
 #ifndef _IN_TYPES_H
 #define _IN_TYPES_H
 #include <ultra64.h>
-#include <sched.h>
+#include "sched_pd.h"
 #include "n_libaudio.h"
 #include "constants.h"
 #include "lang.h"

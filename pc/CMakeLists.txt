@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 
-# Tmp: fixup for working on MacOS
-#set(CMAKE_C_COMPILER "/opt/homebrew/bin/gcc-12")
-#set(CMAKE_CXX_COMPILER "/opt/homebrew/bin/g++-12")
-
 project(perfect_dark)
 
 add_compile_definitions(ROMID=ntsc-final)
@@ -17,8 +13,6 @@ add_compile_definitions(AVOID_UB)
 add_definitions("-DIMGUI_DISABLE_OBSOLETE_FUNCTIONS=1")
 add_definitions("-DIMGUI_IMPL_API=extern \"C\" ")
 
-# MacOS x Clang: adding this to avoid the definition of the function "random" in stdlib.h
-add_compile_definitions(_ANSI_SOURCE)
 
 # PC Port options
 add_compile_definitions(PC_PORT_AUDIO_ENABLED=0)
@@ -386,6 +380,8 @@ set(PDARK_PC_FILES
     "gfx/gfxpc.c"
     "gfx/hashmap.c"
     "gfx/gbi_addon.c"
+
+    "assets/AssetConverter.cpp"
 )
 
 set(PDARK_ULTRA_LIB_FILES
@@ -425,8 +421,10 @@ set(PDARK_PC_FRAGMENT_SHADER "shaders/frag.glsl")
 configure_file(${PDARK_PC_VERTEX_SHADER} shaders/vert.glsl COPYONLY)
 configure_file(${PDARK_PC_FRAGMENT_SHADER} shaders/frag.glsl COPYONLY)
 
-#add_compile_options(-fno-builtin -g)
 add_compile_options(-g)
+
+SET (CMAKE_C_FLAGS_INIT   "-g")
+SET (CMAKE_CXX_FLAGS_INIT "-g -Wall -std=c++17")
 
 add_executable(perfect_dark 
     "${PDARK_PC_FILES}" 
@@ -437,7 +435,10 @@ add_executable(perfect_dark
     "${PDARK_IMGUI_FILES}"
 )
 
-target_compile_definitions(perfect_dark PUBLIC -DCIMGUI_USE_OPENGL3 -DCIMGUI_USE_SDL2)
+target_compile_definitions(perfect_dark 
+    PUBLIC -DCIMGUI_USE_OPENGL3 -DCIMGUI_USE_SDL2
+    $<$<COMPILE_LANGUAGE:C>:_ANSI_SOURCE> # MacOS x Clang: adding this to avoid the definition of the function "random" in stdlib.h
+)
 
 target_link_libraries(perfect_dark m ${SDL2_LIBRARIES} ${OPENGL_LIBRARIES})
 

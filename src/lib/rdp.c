@@ -4,7 +4,7 @@
 #include "data.h"
 #include "bss.h"
 #include "lib/memp.h"
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 
 #include "gfx/gfxpc.h"
 

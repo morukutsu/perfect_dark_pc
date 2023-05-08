@@ -1,6 +1,6 @@
 #include <ultra64.h>
 #include "lib/boot.h"
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "constants.h"
 #include "game/menugfx.h"
 #include "bss.h"

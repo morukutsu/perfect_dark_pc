@@ -1,5 +1,5 @@
 #include <ultra64.h>
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "constants.h"
 #include "game/bondmove.h"
 #include "game/cheats.h"

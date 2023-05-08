@@ -6,7 +6,7 @@
 #include "lib/crash.h"
 #include "lib/dma.h"
 #include "lib/rmon.h"
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "lib/str.h"
 #include "lib/vi.h"
 #include "data.h"

@@ -1,6 +1,6 @@
 #include <ultra64.h>
 #include <sched.h>
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "lib/vars.h"
 #include "constants.h"
 #include "game/camdraw.h"

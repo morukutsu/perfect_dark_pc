@@ -11,7 +11,7 @@
 #include "bss.h"
 #include "lib/vi.h"
 #include "lib/mtx.h"
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "data.h"
 #include "types.h"
 

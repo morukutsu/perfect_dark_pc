@@ -127,7 +127,7 @@ void modeldefDebugGdl(Gfx* gdl)
 	}
 }*/
 
-void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct modeldef *modeldef2, struct texpool *texpool, _Bool arg5)
+void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct modeldef *modeldef2, struct texpool *texpool, u32 arg5)
 {
 	s32 allocsize;
 	s32 loadedsize;

@@ -1,6 +1,6 @@
 #include <ultra64.h>
-#include <sched.h>
-#include "lib/sched.h"
+#include "sched_pd.h"
+//#include "lib/sched_lib_pd.h"
 #include "lib/vars.h"
 #include "constants.h"
 #include "game/camdraw.h"
@@ -84,6 +84,8 @@
 #include "native_functions.h"
 #include <stdlib.h>
 #include "debugvars.h"
+
+#include "assets/AssetConverter.h"
 
 #define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 
@@ -352,6 +354,8 @@ void mainInit(void)
 
 	/* Begin: PC init code */
     romInit();
+	AssetLoadFileTable();
+	
     /* End: PC init code*/
 
 	faultInit();
@@ -1209,7 +1213,7 @@ void mainTick(void)
 		profileSetMarker(PROFILE_MAINTICK_START);
 		func000034d8();
 		joyDebugJoy();
-		schedSetCrashEnable2(false);
+		//schedSetCrashEnable2(false);
 
 		if (g_MainGameLogicEnabled) {
 			gdl = gdlstart = gfxGetMasterDisplayList();

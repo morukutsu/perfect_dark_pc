@@ -91,7 +91,7 @@
 #include "lib/mtx.h"
 #include "lib/music.h"
 #include "lib/rng.h"
-#include "lib/sched.h"
+#include "lib/sched_lib_pd.h"
 #include "lib/snd.h"
 #include "lib/vars.h"
 #include "lib/vi.h"
