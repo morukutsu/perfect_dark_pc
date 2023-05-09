@@ -31,6 +31,8 @@
 #include "native_functions.h"
 #include <stdlib.h>
 
+#include "assets/AssetConverter.h"
+
 struct skeleton *g_Skeletons[] = {
 	&g_SkelChr,
 	&g_SkelClassicGun,
@@ -1165,6 +1167,8 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 {
 	struct modeldef *modeldef;
 
+	AssetConvertModeldef(fileid);
+	
 	g_LoadType = LOADTYPE_MODEL;
 
 	if (dst) {

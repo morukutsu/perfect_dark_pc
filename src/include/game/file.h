@@ -17,5 +17,6 @@ void fileSetSize(s32 filenum, void *ptr, u32 size, bool reallocate);
 void fileSetLoadedsize(s32 filenum, u32 size);
 void filesStop(u8 arg0);
 void func0f167330(void);
+void fileLoad(u8 *dst, u32 allocationlen, u32 *romaddrptr, struct fileinfo *info);
 
 #endif
