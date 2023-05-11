@@ -3807,7 +3807,7 @@ void bgunTickGunLoad(void)
 
 		modeldef = fileLoadToAddr(player->gunctrl.loadfilenum, FILELOADMETHOD_EXTRAMEM, (u8 *)ptr, loadsize);
 
-		modeldef = convertModeldef(modeldef, player->gunctrl.loadfilenum, (u8*)ptr);
+		modeldef = convertModeldef(modeldef, player->gunctrl.loadfilenum);
 
 		// Reserve some space for textures
 		allocsize = fileGetLoadedSize(player->gunctrl.loadfilenum) + 0xe00;

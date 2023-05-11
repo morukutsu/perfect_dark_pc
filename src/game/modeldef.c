@@ -30,6 +30,7 @@
 #include "gfx/hashmap.h"
 #include "native_functions.h"
 #include <stdlib.h>
+#include <assert.h>
 
 #include "assets/AssetConverter.h"
 
@@ -345,7 +346,7 @@ struct model_vtx_section {
 };
 
 
-struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst)
+struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid)
 {
 	struct modeldef_load *modeldef_load;
 	u8* rawBuffer;
@@ -1167,8 +1168,6 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 {
 	struct modeldef *modeldef;
 
-	AssetConvertModeldef(fileid);
-	
 	g_LoadType = LOADTYPE_MODEL;
 
 	if (dst) {
@@ -1177,7 +1176,26 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 		modeldef = fileLoadToNew(fileid, FILELOADMETHOD_EXTRAMEM);
 	}
 
-	modeldef = convertModeldef(modeldef, fileid, dst);
+	/*
+		The game loads the asset using its own file system, then we convert it in place
+		In the future, it would be best to convert all assets in advance, then modify 
+		fileLoad to the loading of converted assets is abstracted away
+	*/
+	size_t newSize = AssetConvertModeldef(fileid, (uint8_t*)modeldef, fileGetLoadedSize(fileid));
+
+	// If the buffer is not large enough to hold the converted file, the program cannot continue as 
+	// the converted file is overwriting data after the buffer.
+	assert(dst && size > newSize);
+
+	if (newSize > fileGetLoadedSize(fileid)) {
+		debugPrint(PC_DBG_FLAG_MODEL, "# Warning larger file, calling fileSetLoadedsize...\n");
+		fileSetLoadedsize(fileid, newSize);
+	}
+
+	modelPromoteTypeToPointer(modeldef);
+	modelPromoteOffsetsToPointers(modeldef, 0x0, (uintptr_t)modeldef);
+
+	//modeldef = convertModeldef(modeldef, fileid);
 
 	modeldef0f1a7560(modeldef, fileid, 0x5000000, modeldef, arg3, dst == NULL);
 

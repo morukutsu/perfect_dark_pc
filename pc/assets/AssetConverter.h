@@ -10,7 +10,12 @@ extern "C" {
 #endif
 
 void AssetLoadFileTable();
-void AssetConvertModeldef(uint16_t fileid);
+
+void AssetLoadFileToAddr(uint16_t fileid, void* dst, size_t allocationSize);
+//void AssetConvertModeldef(uint16_t fileid);
+size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize);
+//void AssetConvertModeldefAtAddr(void* dst, size_t allocationSize, size_t originalFileSize);
+
 
 #ifdef __cplusplus
 }

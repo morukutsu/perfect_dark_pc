@@ -8,6 +8,6 @@ void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct m
 void modelPromoteTypeToPointer(struct modeldef *modeldef);
 struct modeldef *modeldefLoad(u16 fileid, u8 *arg1, s32 arg2, struct texpool *arg3);
 struct modeldef *modeldefLoadToNew(u16 fileid);
-struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid, u8 *dst);
+struct modeldef *convertModeldef(struct modeldef* modeldef, u16 fileid);
 
 #endif

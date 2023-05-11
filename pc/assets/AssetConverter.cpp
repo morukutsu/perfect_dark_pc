@@ -170,6 +170,18 @@ std::pair<uint8_t*, size_t> AssetLoadFile(uint16_t fileid)
 	return std::make_pair(data, inflatedSize);
 }
 
+void AssetLoadFileToAddr(uint16_t fileid, void* dst, size_t allocationSize)
+{
+	std::pair<uint8_t*, size_t> fileData = AssetLoadFile(fileid);
+	assert(allocationSize > fileData.second);
+
+	memcpy(dst, fileData.first, fileData.second);
+	delete fileData.first;
+}
+
+/*
+	Recursively traverse modelnodes from a modeldef file and output a list of modelnode offsets
+*/
 void _traverseModelnodesLoad(std::vector<uint32_t>& offsets, void* base, uint32_t offset)
 {
 	if (offset == 0) return;
@@ -196,7 +208,8 @@ void _traverseModelnodesLoad(std::vector<uint32_t>& offsets, void* base, uint32_
 	}
 }
 
-uint8_t* s_convertBuffer[1 * 1024 * 1024];
+const size_t PD_ASSET_CONVERT_BUFFER_SIZE = 1 * 1024 * 1024;
+uint8_t* s_convertBuffer[PD_ASSET_CONVERT_BUFFER_SIZE];
 
 #define MODEL_VTX_SECTION_MAX_COUNT 128
 
@@ -204,10 +217,14 @@ struct model_vtx_section {
 	u32 start, size;
 };
 
-void AssetConvertModeldef(uint16_t fileid)
+/*
+	Convert N64 modeldef files the PC format
+*/
+size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 {
 	debugPrint(PC_DBG_FLAG_FILE, "AssetConvertModeldef: fileid %x\n", fileid);
-	std::pair<uint8_t*, size_t> fileData = AssetLoadFile(fileid);
+	//std::pair<uint8_t*, size_t> fileData = AssetLoadFile(fileid);
+	std::pair<uint8_t*, size_t> fileData = std::make_pair(src, fileSize);
 
 	/*
 		When converting a file, it's possible that the file becomes larger than the original N64 file
@@ -233,7 +250,6 @@ void AssetConvertModeldef(uint16_t fileid)
 	modeldef->texconfigs = 0;
 
 	fileWriteOffset += sizeof (struct modeldef);
-	debugPrint(PC_DBG_FLAG_MODEL, "fileWriteOffset: %x (after modeldef)\n", fileWriteOffset);
 
 	debugPrint(PC_DBG_FLAG_MODEL, "modeldef %d\n", fileid);
 	debugPrint(PC_DBG_FLAG_MODEL, "- numparts %d\n", modeldef->numparts);
@@ -295,7 +311,7 @@ void AssetConvertModeldef(uint16_t fileid)
 		node->prev = (struct modelnode*)(uintptr_t)origToNewOffsetMap[(uintptr_t)node->prev];
 
 		// And load the rodata, convert it if necessary
-		u32 type = node->type & 0xff;
+		uint8_t type = node->type & 0xff;
 		switch(type)
 		{
 			case MODELNODETYPE_POSITION: {
@@ -395,7 +411,7 @@ void AssetConvertModeldef(uint16_t fileid)
 				struct gfxvtx* vtxptr = (struct gfxvtx*)((uintptr_t)modeldef_load - (uintptr_t)vmaSectionOffset + (uintptr_t)swap_uint32(rodataSrc->vertices));
 				struct gfxvtx* vtxdst = (struct gfxvtx*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[swap_uint32(rodataSrc->vertices)] = fileWriteOffset;
 
 				rodataDst->vertices = (struct gfxvtx*)(uintptr_t)fileWriteOffset;
 				debugPrint(PC_DBG_FLAG_MODEL, "write vertices at: %x\n", rodataDst->vertices);
@@ -692,7 +708,7 @@ void AssetConvertModeldef(uint16_t fileid)
 	}
 	
 	// Adjust offsets in the main modeldef structure
-	modeldef->rootnode = (struct modelnode*)(uintptr_t)rootNodeOffset;
+	modeldef->rootnode = (struct modelnode*)(uintptr_t)origToNewOffsetMap[rootNodeOffset];
 
 	/*
 		Read parts
@@ -861,7 +877,7 @@ void AssetConvertModeldef(uint16_t fileid)
 			fileWriteOffset += len;
 		} else {
 			// The texture is probably not embedded
-			debugPrint(PC_DBG_FLAG_MODEL, "External texture\n");
+			debugPrint(PC_DBG_FLAG_MODEL, "External texture %x\n", tex->texturenum);
 		}
 	}
 
@@ -885,6 +901,9 @@ void AssetConvertModeldef(uint16_t fileid)
 			(void*)((uintptr_t)modeldef_load + ((uintptr_t)gdlsStartOffset & 0xffffff)), 
 			gdlsSize
 		);
+
+		// Save the offset of the first GDL
+		origToNewOffsetMap[gdlsStartOffset] = fileWriteOffset;
 
 		// Adjust the endianness of each display list element
 		u32* dlptr = (u32*)((uintptr_t)s_convertBuffer + fileWriteOffset);
@@ -944,5 +963,54 @@ void AssetConvertModeldef(uint16_t fileid)
 		fileWriteOffset += gdlsSize;
 	}
 
-	delete[] fileData.first;
+	for (auto& offset : gdlOffsets)
+	{
+		uint32_t gdlsStartOffset = *gdlOffsets.begin();
+		uint32_t gdlOffsetToFirstGdl = offset - gdlsStartOffset;
+
+		origToNewOffsetMap[offset] = origToNewOffsetMap[gdlsStartOffset] + gdlOffsetToFirstGdl;
+	}
+
+	// Iterates nodes again and replace gdl offsets by the new ones
+	// For each GDL, we have to calculate their offset relative to the first GDL in the original file
+	// Then we can use that information to calculate the offset in the new file
+	for (auto& offset : modelnodesOffsets)
+	{
+		uint32_t newOffset = origToNewOffsetMap[offset];
+		struct modelnode* node = (struct modelnode*)((uintptr_t)s_convertBuffer + (uintptr_t)newOffset);
+		assert(node->type > 0);
+
+		uint32_t type = node->type & 0xff;
+		switch(type)
+		{
+			case MODELNODETYPE_GUNDL: {
+				union modelrodata* rodata = (union modelrodata*)((uintptr_t)s_convertBuffer + (uintptr_t)node->rodata);
+				rodata->gundl.xlugdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->gundl.xlugdl];
+				rodata->gundl.opagdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->gundl.opagdl];
+				break;
+			}
+
+			case MODELNODETYPE_DL: {
+				union modelrodata* rodata = (union modelrodata*)((uintptr_t)s_convertBuffer + (uintptr_t)node->rodata);
+				rodata->dl.xlugdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->dl.xlugdl];
+				rodata->dl.opagdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->dl.opagdl];
+				break;
+			}
+		}
+	}
+
+	debugPrint(PC_DBG_FLAG_MODEL, "# Previous file size: %x\n", fileData.second);
+	debugPrint(PC_DBG_FLAG_MODEL, "# New file size: %x\n", fileWriteOffset);
+
+	// Copy the converted file to the original buffer and cleanup
+	memcpy((void*)src, (void*)s_convertBuffer, fileWriteOffset);
+	memset(s_convertBuffer, 0, PD_ASSET_CONVERT_BUFFER_SIZE);
+
+	return fileWriteOffset;
+}
+
+void AssetConvertModeldefAtAddr(void* dst, size_t allocationSize, size_t originalFileSize)
+{
+	// Load the asset, convert it...
+
 }
