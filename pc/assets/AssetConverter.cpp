@@ -19,6 +19,10 @@ extern "C" {
 	#include "byteswap.h"
 };
 
+/*
+	Perfect Dark file descriptor, this structure is populated from the rom
+	in AssetLoadFileTable()
+*/
 struct PDFile
 {
 	uint32_t fileRomAddress;
@@ -37,10 +41,13 @@ enum PDVersion
 	PD_VERSION_COUNT
 };
 
+/*
+	Store the address of the file index and data segment for each ROM version
+*/
 struct PDRomInfo
 {
-	uint32_t filesIndexAddress;  // addr of the files index, relative to the inflated files data segment
-	uint32_t filesDataRomAddress;   // addr of the files data segment in the ROM
+	uint32_t filesIndexAddress; // addr of the files index, relative to the inflated files data segment
+	uint32_t filesDataRomAddress; // addr of the files data segment in the ROM
 };
 
 /*
@@ -51,6 +58,7 @@ struct PDRomInfo
 
 PDRomInfo s_PDRomInfo[PD_VERSION_COUNT];
 std::vector<PDFile> s_PDFilesTable;
+
 const size_t FILELOAD_BUFFER_SIZE = 1 * 1024 * 1024;
 char s_fileLoadBuffer[FILELOAD_BUFFER_SIZE];
 char s_fileInflateBuffer[FILELOAD_BUFFER_SIZE];
@@ -77,14 +85,15 @@ void AssetLoadFileTable()
 	uint8_t* data = new uint8_t[temporaryBufferSize];
 	uint8_t* inflatedData = new uint8_t[temporaryBufferSize];
 
-	// Will copy temporaryBufferSize bytes from the ROM. It's larger than the actual size of the file index
+	// Copy temporaryBufferSize bytes from the ROM (It's larger than the actual size of the file index)
+	// TODO: find the size of each segment and use that size instead
 	romCopy(data, rom.filesDataRomAddress, temporaryBufferSize);
 	
-	// Unzip data segment
+	// Unzip data segment into a temporary buffer
 	size_t filesIndexDataLength = rzipInflate(data, inflatedData, 0);
 	debugPrint(PC_DBG_FLAG_FILE, "filesIndexDataLength: %x bytes\n", filesIndexDataLength);
 
-	// Read the file index in the inflated data segment
+	// Read the file index from the inflated data segment
 	size_t filesCount = 0;
 
 	uint32_t* filesAddresses = (uint32_t*)(inflatedData + rom.filesIndexAddress);
@@ -132,8 +141,6 @@ void AssetLoadFileTable()
 		const char* filename = (const char*)(g_romData + filesNamesTableRomAddress + filenameOffset);
 
 		size_t length = strlen(filename);
-		//debugPrint(PC_DBG_FLAG_FILE, "filenameOffset %x len %x\n", filenameOffset, length);
-
 		s_PDFilesTable[i].filename = std::string(filename);
 	}
 
@@ -181,6 +188,7 @@ void AssetLoadFileToAddr(uint16_t fileid, void* dst, size_t allocationSize)
 
 /*
 	Recursively traverse modelnodes from a modeldef file and output a list of modelnode offsets
+	The modelnode offsets are used to retrieve each node in the original N64 format
 */
 void _traverseModelnodesLoad(std::vector<uint32_t>& offsets, void* base, uint32_t offset)
 {
@@ -217,6 +225,21 @@ struct model_vtx_section {
 	u32 start, size;
 };
 
+class FileWriteOffset
+{
+	public:
+		FileWriteOffset(void* addr) { baseAddress = addr; }
+		size_t get() { return offset; }
+		void increment(size_t size) { offset += size; }
+
+		void* getDataPtrAt(size_t off) { return (void*)((uintptr_t)baseAddress + (uintptr_t)off); }
+		void* getDataPtrCurrent() { return (void*)((uintptr_t)baseAddress + (uintptr_t)offset); }
+
+	public:
+		size_t offset = 0;
+		void* baseAddress;
+};
+
 /*
 	Convert N64 modeldef files the PC format
 */
@@ -232,7 +255,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	*/
 	struct modeldef_load* modeldef_load = (struct modeldef_load*)fileData.first;
 	struct modeldef* modeldef = (struct modeldef*)s_convertBuffer;
-	size_t fileWriteOffset = 0;
+	FileWriteOffset fileWriteOffset(s_convertBuffer);
 
 	// To cleanup
 	u32 vtxSectionsCount = 0;
@@ -249,7 +272,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	modeldef->numtexconfigs = swap_int16(modeldef_load->numtexconfigs);
 	modeldef->texconfigs = 0;
 
-	fileWriteOffset += sizeof (struct modeldef);
+	fileWriteOffset.increment(sizeof (struct modeldef));
 
 	debugPrint(PC_DBG_FLAG_MODEL, "modeldef %d\n", fileid);
 	debugPrint(PC_DBG_FLAG_MODEL, "- numparts %d\n", modeldef->numparts);
@@ -288,19 +311,19 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 		assert(node.type > 0);
 
-		origToNewOffsetMap[offset] = fileWriteOffset;
+		origToNewOffsetMap[offset] = fileWriteOffset.get();
 
-		debugPrint(PC_DBG_FLAG_MODEL, "modelnode written: %x -> %x\n", offset, fileWriteOffset);
+		debugPrint(PC_DBG_FLAG_MODEL, "modelnode written: %x -> %x\n", offset, fileWriteOffset.get());
 
-		memcpy((void*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset), &node, sizeof(struct modelnode));
-		fileWriteOffset += sizeof(struct modelnode);
+		memcpy(fileWriteOffset.getDataPtrCurrent(), &node, sizeof(struct modelnode));
+		fileWriteOffset.increment(sizeof(struct modelnode));
 	}
 
 	// Traverse the nodes again and convert each one
 	for (auto& offset : modelnodesOffsets)
 	{
 		uint32_t newOffset = origToNewOffsetMap[offset];
-		struct modelnode* node = (struct modelnode*)((uintptr_t)s_convertBuffer + (uintptr_t)newOffset);
+		struct modelnode* node = (struct modelnode*)fileWriteOffset.getDataPtrAt(newOffset);
 		assert(node->type > 0);
 
 		debugPrint(PC_DBG_FLAG_MODEL, "modelnode ptr: %llx type: %x\n", node, node->type);
@@ -318,7 +341,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_position* rodataSrc = 
 					(struct modelrodata_position*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_position* rodataDst = (struct modelrodata_position*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_position* rodataDst = (struct modelrodata_position*)fileWriteOffset.getDataPtrCurrent();
 
 				rodataDst->pos = rodataSrc->pos;
 				swap_coord(&rodataDst->pos);
@@ -328,9 +351,9 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->mtxindex2 = swap_int16(rodataSrc->mtxindex2);
 				rodataDst->drawdist = swap_f32(rodataSrc->drawdist);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_position);
+				fileWriteOffset.increment(sizeof(struct modelrodata_position));
 				break;
 			}
 
@@ -338,7 +361,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_bbox* rodataSrc = 
 					(struct modelrodata_bbox*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_bbox* rodataDst = (struct modelrodata_bbox*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_bbox* rodataDst = (struct modelrodata_bbox*)fileWriteOffset.getDataPtrCurrent();
 
 				rodataDst->hitpart = swap_int32(rodataSrc->hitpart);
 				rodataDst->xmin = swap_f32(rodataSrc->xmin);
@@ -348,9 +371,9 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->zmin = swap_f32(rodataSrc->zmin);
 				rodataDst->zmax = swap_f32(rodataSrc->zmax);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_bbox);
+				fileWriteOffset.increment(sizeof(struct modelrodata_bbox));
 				break;
 			}
 
@@ -358,14 +381,14 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_toggle_load* rodataSrc = 
 					(struct modelrodata_toggle_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_toggle* rodataDst = (struct modelrodata_toggle*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_toggle* rodataDst = (struct modelrodata_toggle*)fileWriteOffset.getDataPtrCurrent();
 
 				rodataDst->target = (struct modelnode*)(uintptr_t)origToNewOffsetMap[swap_uint32(rodataSrc->target)];
 				rodataDst->rwdataindex = swap_uint16(rodataDst->rwdataindex);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_toggle);
+				fileWriteOffset.increment(sizeof(struct modelrodata_toggle));
 				break;
 			}
 
@@ -373,7 +396,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_gundl_load* rodataSrc = 
 					(struct modelrodata_gundl_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_gundl* rodataDst = (struct modelrodata_gundl*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_gundl* rodataDst = (struct modelrodata_gundl*)fileWriteOffset.getDataPtrCurrent();
 				
 				/*
 					Note: the display lists are following each other at the end of the file
@@ -401,25 +424,25 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->numvertices = swap_int16(rodataSrc->numvertices);
 				rodataDst->unk12 = swap_int16(rodataSrc->unk12);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_gundl);
+				fileWriteOffset.increment(sizeof(struct modelrodata_gundl));
 
 				// We can probably append the vertices next to it here
 				// Or put them in the file before the display lists, dunno if it's important or not
 				// Then we can parse the display list, look for vertex calls and adjust the offsets there?
 				struct gfxvtx* vtxptr = (struct gfxvtx*)((uintptr_t)modeldef_load - (uintptr_t)vmaSectionOffset + (uintptr_t)swap_uint32(rodataSrc->vertices));
-				struct gfxvtx* vtxdst = (struct gfxvtx*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct gfxvtx* vtxdst = (struct gfxvtx*)fileWriteOffset.getDataPtrCurrent();
 
-				origToNewOffsetMap[swap_uint32(rodataSrc->vertices)] = fileWriteOffset;
+				origToNewOffsetMap[swap_uint32(rodataSrc->vertices)] = fileWriteOffset.get();
 
-				rodataDst->vertices = (struct gfxvtx*)(uintptr_t)fileWriteOffset;
+				rodataDst->vertices = (struct gfxvtx*)(uintptr_t)fileWriteOffset.get();
 				debugPrint(PC_DBG_FLAG_MODEL, "write vertices at: %x\n", rodataDst->vertices);
 				
 				vtxSectionsSrc[vtxSectionsCount].start = swap_uint32(rodataSrc->vertices);
 				vtxSectionsSrc[vtxSectionsCount].size = rodataDst->numvertices * sizeof(struct gfxvtx);
 
-				vtxSectionsDst[vtxSectionsCount].start = fileWriteOffset;
+				vtxSectionsDst[vtxSectionsCount].start = fileWriteOffset.get();
 				vtxSectionsDst[vtxSectionsCount].size = rodataDst->numvertices * sizeof(struct gfxvtx);
 
 				vtxSectionsCount++;
@@ -433,7 +456,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 					vtxdst[i].s = swap_int16(vtxptr[i].s);
 					vtxdst[i].t = swap_int16(vtxptr[i].t);
 
-					fileWriteOffset += sizeof(struct gfxvtx);
+					fileWriteOffset.increment(sizeof(struct gfxvtx));
 				}
 
 				// It seems the color table is located right after the vertices
@@ -457,15 +480,15 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 							
 							// Copy the colors to the new buffer
 							u32* colorSrc = (u32*)((uintptr_t)modeldef_load + swap_uint32(cmd->words.w1) - (uintptr_t)vmaSectionOffset);
-							u32* colorDst = (u32*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+							u32* colorDst = (u32*)fileWriteOffset.getDataPtrCurrent();
 							for (int j = 0; j < colorBufferSize / 4; j++)
 							{
 								colorDst[j] = swap_uint32(colorSrc[j]);
 							}
 
-							origToNewOffsetMap[swap_uint32(cmd->words.w1)] = fileWriteOffset;
+							origToNewOffsetMap[swap_uint32(cmd->words.w1)] = fileWriteOffset.get();
 
-							fileWriteOffset += colorBufferSize;
+							fileWriteOffset.increment(colorBufferSize);
 						}
 
 						cmd++;
@@ -479,7 +502,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_reorder_load* rodataSrc = 
 					(struct modelrodata_reorder_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_reorder* rodataDst = (struct modelrodata_reorder*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_reorder* rodataDst = (struct modelrodata_reorder*)fileWriteOffset.getDataPtrCurrent();
 
 				rodataDst->unk00 = swap_f32(rodataSrc->unk00);
 				rodataDst->unk04 = swap_f32(rodataSrc->unk04);
@@ -493,9 +516,9 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->unk18 = (struct modelnode*)(uintptr_t)origToNewOffsetMap[swap_uint32(rodataSrc->unk18)];
 				rodataDst->unk1c = (struct modelnode*)(uintptr_t)origToNewOffsetMap[swap_uint32(rodataSrc->unk1c)];
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_reorder);
+				fileWriteOffset.increment(sizeof(struct modelrodata_reorder));
 				break;
 			}
 
@@ -503,7 +526,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				struct modelrodata_dl_load* rodataSrc = 
 					(struct modelrodata_dl_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
 				
-				struct modelrodata_dl* rodataDst = (struct modelrodata_dl*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_dl* rodataDst = (struct modelrodata_dl*)fileWriteOffset.getDataPtrCurrent();
 				
 				debugPrint(PC_DBG_FLAG_MODEL, "- opagdl: %x\n", swap_uint32(rodataSrc->opagdl));
 				debugPrint(PC_DBG_FLAG_MODEL, "- xlugdl: %x\n", swap_uint32(rodataSrc->xlugdl));
@@ -531,21 +554,21 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				colourptr = (u32*)((uintptr_t)rodataDst->vertices + (uintptr_t)rodataDst->numvertices * sizeof(struct gfxvtx));
 				debugPrint(PC_DBG_FLAG_MODEL, "- colourptr: %llx\n", colourptr);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_dl);
+				fileWriteOffset.increment(sizeof(struct modelrodata_dl));
 
 				// Copy the vertices
 				struct gfxvtx* vtxptr = (struct gfxvtx*)((uintptr_t)modeldef_load - (uintptr_t)vmaSectionOffset + (uintptr_t)swap_uint32(rodataSrc->vertices));
-				struct gfxvtx* vtxdst = (struct gfxvtx*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct gfxvtx* vtxdst = (struct gfxvtx*)fileWriteOffset.getDataPtrCurrent();
 
-				rodataDst->vertices = (struct gfxvtx*)(uintptr_t)fileWriteOffset;
+				rodataDst->vertices = (struct gfxvtx*)(uintptr_t)fileWriteOffset.get();
 				debugPrint(PC_DBG_FLAG_MODEL, "write vertices at: %x\n", rodataDst->vertices);
 				
 				vtxSectionsSrc[vtxSectionsCount].start = swap_uint32(rodataSrc->vertices);
 				vtxSectionsSrc[vtxSectionsCount].size = rodataDst->numvertices * sizeof(struct gfxvtx);
 
-				vtxSectionsDst[vtxSectionsCount].start = fileWriteOffset;
+				vtxSectionsDst[vtxSectionsCount].start = fileWriteOffset.get();
 				vtxSectionsDst[vtxSectionsCount].size = rodataDst->numvertices * sizeof(struct gfxvtx);
 
 				vtxSectionsCount++;
@@ -559,7 +582,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 					vtxdst[i].s = swap_int16(vtxptr[i].s);
 					vtxdst[i].t = swap_int16(vtxptr[i].t);
 
-					fileWriteOffset += sizeof(struct gfxvtx);
+					fileWriteOffset.increment(sizeof(struct gfxvtx));
 				}
 
 				// Copy the colors
@@ -567,63 +590,63 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 				// Copy the colors to the new buffer
 				u32* colorSrc = (u32*)((uintptr_t)modeldef_load + (uintptr_t)colourptr - (uintptr_t)vmaSectionOffset);
-				u32* colorDst = (u32*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				u32* colorDst = (u32*)fileWriteOffset.getDataPtrCurrent();
 				for (int j = 0; j < colorBufferSize / 4; j++)
 				{
 					colorDst[j] = swap_uint32(colorSrc[j]);
 				}
 
-				origToNewOffsetMap[(uintptr_t)colourptr] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)colourptr] = fileWriteOffset.get();
 
-				fileWriteOffset += colorBufferSize;
+				fileWriteOffset.increment(colorBufferSize);
 				break;
 			}
 
 			case MODELNODETYPE_CHRINFO: {
 				struct modelrodata_chrinfo* rodataSrc = (struct modelrodata_chrinfo*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_chrinfo* rodataDst = (struct modelrodata_chrinfo*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_chrinfo* rodataDst = (struct modelrodata_chrinfo*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->animpart = swap_uint16(rodataSrc->animpart);
 				rodataDst->mtxindex = swap_int16(rodataSrc->mtxindex);
 				rodataDst->unk04 = swap_f32(rodataSrc->unk04);
 				rodataDst->rwdataindex = swap_uint16(rodataSrc->rwdataindex);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_chrinfo);
+				fileWriteOffset.increment(sizeof(struct modelrodata_chrinfo));
 				break;
 			}
 
 			case MODELNODETYPE_HEADSPOT: {
 				struct modelrodata_headspot* rodataSrc = (struct modelrodata_headspot*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_headspot* rodataDst = (struct modelrodata_headspot*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_headspot* rodataDst = (struct modelrodata_headspot*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->rwdataindex = swap_uint16(rodataSrc->rwdataindex);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_headspot);
+				fileWriteOffset.increment(sizeof(struct modelrodata_headspot));
 				break;
 			}
 
 			case MODELNODETYPE_DISTANCE: {
 				struct modelrodata_distance_load* rodataSrc = (struct modelrodata_distance_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_distance* rodataDst = (struct modelrodata_distance*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_distance* rodataDst = (struct modelrodata_distance*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->near = swap_f32(rodataSrc->near);
 				rodataDst->far = swap_f32(rodataSrc->far);
 				rodataDst->target = (struct modelnode*)(uintptr_t)origToNewOffsetMap[swap_uint32(rodataSrc->target)];
 				rodataDst->rwdataindex = swap_uint16(rodataSrc->rwdataindex);
 				
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_distance);
+				fileWriteOffset.increment(sizeof(struct modelrodata_distance));
 				break;
 			}
 
 			case 0x19: {
 				struct modelrodata_type19* rodataSrc = (struct modelrodata_type19*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_type19* rodataDst = (struct modelrodata_type19*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_type19* rodataDst = (struct modelrodata_type19*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->numvertices = swap_int32(rodataSrc->numvertices);
 				for (u32 i = 0; i < 4; i++)
@@ -632,15 +655,15 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 					swap_coord(&rodataDst->vertices[i]);
 				}
 				
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_type19);
+				fileWriteOffset.increment(sizeof(struct modelrodata_type19));
 				break;
 			}
 
 			case MODELNODETYPE_CHRGUNFIRE: {
 				struct modelrodata_chrgunfire_load* rodataSrc = (struct modelrodata_chrgunfire_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_chrgunfire* rodataDst = (struct modelrodata_chrgunfire*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_chrgunfire* rodataDst = (struct modelrodata_chrgunfire*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->pos = rodataSrc->pos;
 				swap_coord(&rodataDst->pos);
@@ -653,30 +676,30 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->rwdataindex = swap_uint16(rodataSrc->rwdataindex);
 				rodataDst->baseaddr = (void*)(uintptr_t)swap_uint32(rodataSrc->baseaddr);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_chrgunfire);
+				fileWriteOffset.increment(sizeof(struct modelrodata_chrgunfire));
 				break;
 			}
 
 			case MODELNODETYPE_POSITIONHELD: {
 				struct modelrodata_positionheld* rodataSrc = (struct modelrodata_positionheld*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_positionheld* rodataDst = (struct modelrodata_positionheld*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_positionheld* rodataDst = (struct modelrodata_positionheld*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->pos = rodataSrc->pos;
 				swap_coord(&rodataDst->pos);
 
 				rodataDst->mtxindex = swap_int16(rodataSrc->mtxindex);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_positionheld);
+				fileWriteOffset.increment(sizeof(struct modelrodata_positionheld));
 				break;
 			}
 
 			case MODELNODETYPE_11: {
 				struct modelrodata_type11_load* rodataSrc = (struct modelrodata_type11_load*)((uintptr_t)modeldef_load - vmaSectionOffset + (uintptr_t)node->rodata);
-				struct modelrodata_type11* rodataDst = (struct modelrodata_type11*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+				struct modelrodata_type11* rodataDst = (struct modelrodata_type11*)fileWriteOffset.getDataPtrCurrent();
 				
 				rodataDst->unk00 = swap_uint32(rodataSrc->unk00);
 				rodataDst->unk04 = swap_uint32(rodataSrc->unk04);
@@ -685,9 +708,9 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				rodataDst->unk10 = swap_uint32(rodataSrc->unk10);
 				rodataDst->unk14 = (void*)(uintptr_t)swap_uint32(rodataSrc->unk14);
 
-				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset;
+				origToNewOffsetMap[(uintptr_t)node->rodata] = fileWriteOffset.get();
 
-				fileWriteOffset += sizeof(struct modelrodata_type11);
+				fileWriteOffset.increment(sizeof(struct modelrodata_type11));
 				break;
 			}
 			
@@ -702,7 +725,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	for (auto& offset : modelnodesOffsets)
 	{
 		uint32_t newOffset = origToNewOffsetMap[offset];
-		struct modelnode* node = (struct modelnode*)((uintptr_t)s_convertBuffer + (uintptr_t)newOffset);
+		struct modelnode* node = (struct modelnode*)fileWriteOffset.getDataPtrAt(newOffset);
 		
 		node->rodata = (union modelrodata*)(uintptr_t)origToNewOffsetMap[(uintptr_t)node->rodata];
 	}
@@ -721,7 +744,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	*/
 	
 	// Modeldef write: Copy the parts offsets
-	const u32 PARTS_SECTION_START = fileWriteOffset;
+	const u32 PARTS_SECTION_START = fileWriteOffset.get();
 	debugPrint(PC_DBG_FLAG_MODEL, "modeldefOffset: %x (after parts)\n", fileWriteOffset);
 
 	for (int i = 0; i < modeldef->numparts; i++) {
@@ -737,28 +760,28 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 		u64* ptr = (u64*)((uintptr_t)s_convertBuffer + (uintptr_t)PARTS_SECTION_START + i * sizeof(void*));
 		*ptr = (u64)newOffset;
 
-		fileWriteOffset += sizeof(void*);
+		fileWriteOffset.increment(sizeof(void*));
 	}
 
 	modeldef->parts = (struct modelnode**)(uintptr_t)PARTS_SECTION_START;
 
 	// Is followed by a variable s16 array of part numbers... Write it to the file
-	const u32 PARTNUM_SECTION_START = fileWriteOffset;
+	const u32 PARTNUM_SECTION_START = fileWriteOffset.get();
 
 	s16* partnums = (s16*)((uintptr_t)modeldef_load - vmaSectionOffset + swap_uint32(modeldef_load->parts) + 4 * modeldef->numparts);
 	for (int i = 0; i < modeldef->numparts; i++) {
 		s16* ptr = (s16*)((uintptr_t)s_convertBuffer + (uintptr_t)PARTNUM_SECTION_START + i * sizeof(s16));
 		*ptr = swap_int16(partnums[i]);
 
-		fileWriteOffset += sizeof(s16);
+		fileWriteOffset.increment(sizeof(s16));
 	}
 
-	const u32 TEXCONFIGS_SECTION_START = fileWriteOffset;
+	const u32 TEXCONFIGS_SECTION_START = fileWriteOffset.get();
 	const u32 texconfigsOffset = swap_uint32(modeldef_load->texconfigs);
 
 	for (int i = 0; i < modeldef->numtexconfigs; i++) {
 		struct textureconfig_load* src = (struct textureconfig_load*)((uintptr_t)modeldef_load - vmaSectionOffset + texconfigsOffset);
-		struct textureconfig* dst = (struct textureconfig*)((uintptr_t)s_convertBuffer + fileWriteOffset);
+		struct textureconfig* dst = (struct textureconfig*)fileWriteOffset.getDataPtrCurrent();
 		
 		debugPrint(PC_DBG_FLAG_MODEL, "src[%d].texturenum: %x\n", i, swap_uint32(src[i].texturenum));
 		debugPrint(PC_DBG_FLAG_MODEL, "src[%d].width: %d\n", i, (src[i].width));
@@ -781,7 +804,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 		//hexdump((uintptr_t)modeldef_load - vma + (uintptr_t)dst->texturenum, dst->width * dst->height * 2);
 
-		fileWriteOffset += sizeof(struct textureconfig);
+		fileWriteOffset.increment(sizeof(struct textureconfig));
 	}
 
 	modeldef->texconfigs = (struct textureconfig*)(uintptr_t)TEXCONFIGS_SECTION_START;
@@ -789,7 +812,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	/* --------------------
 		TEXTURES
 	   -------------------- */
-	const u32 TEXDATA_SECTION_START = fileWriteOffset;
+	const u32 TEXDATA_SECTION_START = fileWriteOffset.get();
 
 	for (int i = 0; i < modeldef->numtexconfigs; i++) {
 		struct textureconfig* list = (struct textureconfig*)((uintptr_t)modeldef + (uintptr_t)modeldef->texconfigs);
@@ -815,7 +838,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 				fatalExit();
 			}
 
-			void* textureDst = (void*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset);
+			void* textureDst = fileWriteOffset.getDataPtrCurrent();
 			memcpy(textureDst, textureAddr, len);
 			
 			/*
@@ -864,17 +887,17 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 			texSwapAltRowBytes2((u8*)textureDst, tex->width, tex->height, format);
 
-			tex->texturenum = fileWriteOffset;
+			tex->texturenum = fileWriteOffset.get();
 
 			// Put the vma offset in the texturenum offset
 			// texLoad will detect it and know this texture is already loaded in RAM
-			tex->texturenum = fileWriteOffset | vmaSectionOffset;
+			tex->texturenum = fileWriteOffset.get() | vmaSectionOffset;
 
 			debugPrint(PC_DBG_FLAG_MODEL, "old embedded texture offset %x new offset %x\n", oldTextureOffset, fileWriteOffset);
 
-			origToNewOffsetMap[oldTextureOffset] = fileWriteOffset;
+			origToNewOffsetMap[oldTextureOffset] = fileWriteOffset.get();
 
-			fileWriteOffset += len;
+			fileWriteOffset.increment(len);
 		} else {
 			// The texture is probably not embedded
 			debugPrint(PC_DBG_FLAG_MODEL, "External texture %x\n", tex->texturenum);
@@ -897,22 +920,22 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 		uint32_t gdlsSize = gdlsEndOffset - gdlsStartOffset;
 		
 		// Copy the GDls to the new file
-		memcpy((void*)((uintptr_t)s_convertBuffer + (uintptr_t)fileWriteOffset), 
+		memcpy(fileWriteOffset.getDataPtrCurrent(), 
 			(void*)((uintptr_t)modeldef_load + ((uintptr_t)gdlsStartOffset & 0xffffff)), 
 			gdlsSize
 		);
 
 		// Save the offset of the first GDL
-		origToNewOffsetMap[gdlsStartOffset] = fileWriteOffset;
+		origToNewOffsetMap[gdlsStartOffset] = fileWriteOffset.get();
 
 		// Adjust the endianness of each display list element
-		u32* dlptr = (u32*)((uintptr_t)s_convertBuffer + fileWriteOffset);
+		u32* dlptr = (u32*)fileWriteOffset.getDataPtrCurrent();
 		for (u32 i = 0; i < gdlsSize / sizeof(u32); i++) {
 			dlptr[i] = swap_uint32(dlptr[i]);
 		}
 		
 		// Look for some commands such as G_VTX and adjust the adresses in them
-		Gfx* dst = (Gfx*)((uintptr_t)s_convertBuffer + fileWriteOffset);
+		Gfx* dst = (Gfx*)fileWriteOffset.getDataPtrCurrent();
 		for (u32 i = 0; i < gdlsSize / sizeof(Gfx); i++) {
 			u8 opcode = dst[i].words.w0 >> 24;
 
@@ -960,7 +983,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 			}
 		}
 
-		fileWriteOffset += gdlsSize;
+		fileWriteOffset.increment(gdlsSize);
 	}
 
 	for (auto& offset : gdlOffsets)
@@ -977,21 +1000,21 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	for (auto& offset : modelnodesOffsets)
 	{
 		uint32_t newOffset = origToNewOffsetMap[offset];
-		struct modelnode* node = (struct modelnode*)((uintptr_t)s_convertBuffer + (uintptr_t)newOffset);
+		struct modelnode* node = (struct modelnode*)fileWriteOffset.getDataPtrAt(newOffset);
 		assert(node->type > 0);
 
 		uint32_t type = node->type & 0xff;
 		switch(type)
 		{
 			case MODELNODETYPE_GUNDL: {
-				union modelrodata* rodata = (union modelrodata*)((uintptr_t)s_convertBuffer + (uintptr_t)node->rodata);
+				union modelrodata* rodata = (union modelrodata*)fileWriteOffset.getDataPtrAt((uintptr_t)node->rodata);
 				rodata->gundl.xlugdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->gundl.xlugdl];
 				rodata->gundl.opagdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->gundl.opagdl];
 				break;
 			}
 
 			case MODELNODETYPE_DL: {
-				union modelrodata* rodata = (union modelrodata*)((uintptr_t)s_convertBuffer + (uintptr_t)node->rodata);
+				union modelrodata* rodata = (union modelrodata*)fileWriteOffset.getDataPtrAt((uintptr_t)node->rodata);
 				rodata->dl.xlugdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->dl.xlugdl];
 				rodata->dl.opagdl = (Gfx*)(uintptr_t)origToNewOffsetMap[(uintptr_t)rodata->dl.opagdl];
 				break;
@@ -1003,10 +1026,10 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 	debugPrint(PC_DBG_FLAG_MODEL, "# New file size: %x\n", fileWriteOffset);
 
 	// Copy the converted file to the original buffer and cleanup
-	memcpy((void*)src, (void*)s_convertBuffer, fileWriteOffset);
+	memcpy((void*)src, (void*)s_convertBuffer, fileWriteOffset.get());
 	memset(s_convertBuffer, 0, PD_ASSET_CONVERT_BUFFER_SIZE);
 
-	return fileWriteOffset;
+	return fileWriteOffset.get();
 }
 
 void AssetConvertModeldefAtAddr(void* dst, size_t allocationSize, size_t originalFileSize)
