@@ -116,19 +116,26 @@ struct skeleton *g_Skeletons[] = {
 	&g_SkelBB,
 };
 
-/*
+#include "gfx/gfxpc.h"
+
 void modeldefDebugGdl(Gfx* gdl)
 {
+	int i = 0;
+
 	print("DBG GDL: %llx\n", gdl);
 	while (true)
 	{
 		u8 opcode = gdl->words.w0 >> 24;
+
+		assert(opcode != 0);
+
+		debug_opcode(gdl, i);
 		if (opcode == (u8)G_ENDDL) break;
 
-		debug_opcode(gdl, 0);
 		gdl++;
+		i++;
 	}
-}*/
+}
 
 void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct modeldef *modeldef2, struct texpool *texpool, u32 arg5)
 {
@@ -151,6 +158,8 @@ void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct m
 
 	newGdlOffset = gdl;
 
+	u32 firstGdlOffset = gdl;
+
 	if (gdl) {
 		/*
 			v1 is the position where the first gdl will be copied, at the end of the allocated buffer
@@ -158,16 +167,26 @@ void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct m
 			I think the GDLs are at the very end of the file, so if we subtract the first gdl address from the loadedsize
 			we can get the size of all GDLs.
 		*/
-		s32 v1 = allocsize - (loadedsize - (s32)(((uintptr_t)modeldef + (gdl & 0xffffff)) - (uintptr_t)modeldef));
+		//s32 v1 = allocsize - (loadedsize - (s32)(((uintptr_t)modeldef + (gdl & 0xffffff)) - (uintptr_t)modeldef));
 
 		// sp84 is where the GDLs at the end of the file are located minus the first DL
 		// this is used to locate where are located the DLs at the end of the buffer
 		// in texLoadFromGdl
-		sp84 = (s32)v1 + (s32)((uintptr_t)modeldef - ((uintptr_t)modeldef + (gdl & 0xffffff)));
+		//sp84 = (s32)v1 + (s32)((uintptr_t)modeldef - ((uintptr_t)modeldef + (gdl & 0xffffff)));
 
+		// Allocate a temporary buffer and copy the first GDLs there
+		u32 size = loadedsize - (s32)(((uintptr_t)modeldef + (gdl & 0xffffff)) - (uintptr_t)modeldef);
+		print("size: %x\n", size);
+		void* srcGdls = nativeMalloc(size);
+
+		/*
 		texCopyGdls((Gfx *)((uintptr_t)modeldef + (gdl & 0xffffff)),
 				(Gfx *)(v1 + (uintptr_t)modeldef),
-				loadedsize - (s32)(((uintptr_t)modeldef + (gdl & 0xffffff)) - (uintptr_t)modeldef));
+				loadedsize - (s32)(((uintptr_t)modeldef + (gdl & 0xffffff)) - (uintptr_t)modeldef));*/
+
+		texCopyGdls((Gfx *)((uintptr_t)modeldef + (gdl & 0xffffff)),
+				(Gfx *)(srcGdls),
+				size);
 				
 		texLoadFromConfigs(modeldef->texconfigs, modeldef->numtexconfigs, texpool, (uintptr_t)modeldef2 - arg2);
 
@@ -198,7 +217,7 @@ void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct m
 			}
 
 			// This will copy from the gdls at the end of the file, to the ones we first loaded
-			Gfx* gdlAtEnd = (Gfx *)((uintptr_t)modeldef + (previousGdlOffset & 0xffffff) + sp84);
+			Gfx* gdlAtEnd = (Gfx *)((previousGdlOffset & 0xffffff) - (firstGdlOffset & 0xffffff) + (uintptr_t)srcGdls);
 			Gfx* gdlAtStart = (Gfx*)((uintptr_t)modeldef + (newGdlOffset & 0xffffff));
 
 			newGdlOffset += texLoadFromGdl(gdlAtEnd, 
@@ -207,7 +226,11 @@ void modeldef0f1a7560(struct modeldef *modeldef, u16 filenum, u32 arg2, struct m
 				texpool, 
 				(u8*)vertices
 			);
+
+			//modeldefDebugGdl(gdlAtEnd);
 		}
+
+		nativeFree(srcGdls);
 
 		fileSetSize(filenum, modeldef, (((uintptr_t)modeldef + (newGdlOffset & 0xffffff)) - (uintptr_t)modeldef + 0xf) & ~0xf, arg5);
 	}
