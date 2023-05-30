@@ -421,7 +421,7 @@ set(PDARK_PC_FRAGMENT_SHADER "shaders/frag.glsl")
 configure_file(${PDARK_PC_VERTEX_SHADER} shaders/vert.glsl COPYONLY)
 configure_file(${PDARK_PC_FRAGMENT_SHADER} shaders/frag.glsl COPYONLY)
 
-add_compile_options(-g)
+add_compile_options(-g -Wno-empty-body)
 
 SET (CMAKE_C_FLAGS_INIT   "-g")
 SET (CMAKE_CXX_FLAGS_INIT "-g -Wall -std=c++17")

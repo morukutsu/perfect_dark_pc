@@ -757,7 +757,8 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 		// Using the N64 offset, we can fill the "parts" offsets array
 		u32 newOffset = origToNewOffsetMap[partOffset];
-		u64* ptr = (u64*)((uintptr_t)s_convertBuffer + (uintptr_t)PARTS_SECTION_START + i * sizeof(void*));
+		
+		u64* ptr = (u64*)fileWriteOffset.getDataPtrAt(PARTS_SECTION_START + i * sizeof(void*));
 		*ptr = (u64)newOffset;
 
 		fileWriteOffset.increment(sizeof(void*));
@@ -770,7 +771,7 @@ size_t AssetConvertModeldef(uint16_t fileid, uint8_t* src, size_t fileSize)
 
 	s16* partnums = (s16*)((uintptr_t)modeldef_load - vmaSectionOffset + swap_uint32(modeldef_load->parts) + 4 * modeldef->numparts);
 	for (int i = 0; i < modeldef->numparts; i++) {
-		s16* ptr = (s16*)((uintptr_t)s_convertBuffer + (uintptr_t)PARTNUM_SECTION_START + i * sizeof(s16));
+		s16* ptr = (s16*)fileWriteOffset.getDataPtrAt(PARTNUM_SECTION_START + i * sizeof(s16));
 		*ptr = swap_int16(partnums[i]);
 
 		fileWriteOffset.increment(sizeof(s16));

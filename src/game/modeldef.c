@@ -1181,15 +1181,21 @@ struct modeldef *modeldefLoad(u16 fileid, u8 *dst, s32 size, struct texpool *arg
 		In the future, it would be best to convert all assets in advance, then modify 
 		fileLoad to the loading of converted assets is abstracted away
 	*/
-	size_t newSize = AssetConvertModeldef(fileid, (uint8_t*)modeldef, fileGetLoadedSize(fileid));
+	size_t loadedSize = fileGetLoadedSize(fileid);
+	size_t newSize = AssetConvertModeldef(fileid, (uint8_t*)modeldef, loadedSize);
 
 	// If the buffer is not large enough to hold the converted file, the program cannot continue as 
 	// the converted file is overwriting data after the buffer.
-	assert(dst && size > newSize);
-
-	if (newSize > fileGetLoadedSize(fileid)) {
-		debugPrint(PC_DBG_FLAG_MODEL, "# Warning larger file, calling fileSetLoadedsize...\n");
-		fileSetLoadedsize(fileid, newSize);
+	if (dst) assert(size > newSize);
+	else 
+	{
+		if (newSize > loadedSize)
+		{
+			// fileLoadToNew, increase the size of the buffer
+			// It should work as nothing is allocated after this one
+			fileSetSize(fileid, (void*)modeldef, newSize, true);
+			debugPrint(PC_DBG_FLAG_MODEL, "# Warning: Converted file is larger than the original file\n");
+		}
 	}
 
 	modelPromoteTypeToPointer(modeldef);
